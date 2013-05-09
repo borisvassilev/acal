@@ -1,4 +1,7 @@
 #!/home/boris/bin/swipl -q -g main -t halt(1) -s
+
+:- use_module(library('dcg/basics')).
+
 main :-
     init(S),
     loop(S).
@@ -12,8 +15,8 @@ cleanup(S) :-
 quit(end_of_file).
 
 loop(S) :-
-    prolog_current_frame(F),
-    write(F), nl,
+    /* DEBUG */ prolog_current_frame(F),
+                write(F), nl,
     read_line_to_codes(user_input, Codes),
     (   quit(Codes) -> cleanup(S) 
     ;   parse_line(Codes, Line),
@@ -60,16 +63,47 @@ do_listop(sort, [e(n,N)|S], [e(n,SN)|S]) :- sort(N,SN).
 do_listop(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N,RN).
 do_listop(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
 
+do_arithop(BinO, [e(n,N0),e(n,N1)|S], [e(n,R)|S]) :-
+    binary_arith_op(BinO), !,
+    mapbinop(BinO, N0, N1, R).
+do_arithop(UnO, [e(n,N)|S], [e(n,R)|S]) :-
+    unary_arith_op(UnO), !,
+    maplist(UnO, N, R).
 
-% arithmetic operations as predicates
-+(N0,N1,R) :- R is N1+N0.
--(N0,N1,R) :- R is N1-N0.
-*(N0,N1,R) :- R is N1*N0.
-/(N0,N1,R) :- R is N1/N0.
+% binary and unary arithmetic operators
+binary_arith_op(BinO) :- memberchk(BinO, [add,sub,mul,dvd,pow]).
+unary_arith_op(UnO) :- memberchk(UnO, [sqrt,abs]).
+
+% map binary op to lists with different length
+% mapbinop(:BinOp, +List1, +List2, -Result)
+mapbinop(BinOp, N0, N1, Result) :-
+    length(N0,L0), length(N1,L1),
+    compare(C,L0,L1),
+    (   C = (=) -> maplist(BinOp, N0, N1, Result)
+    ;   C = (<) -> 0 =:= L1 rem L0, maplistfs(N0, N1, Result, N0, BinOp)
+    ;   C = (>) -> 0 =:= L0 rem L1, maplistss(N0, N1, Result, N1, BinOp)
+    ).
+
+maplistfs([], [], [], _, _) :- !.
+maplistfs([], N1, R, N0, BinOp) :- !, maplistfs(N0, N1, R, N0, BinOp).
+maplistfs([E0|N0], [E1|N1], [R|Result], N0B, BinOp) :-
+    call(BinOp, E0, E1, R),
+    maplistfs(N0, N1, Result, N0B, BinOp).
+
+maplistss([], [], [], _, _) :- !.
+maplistss(N0, [], R, N1, BinOp) :- !, maplistss(N0, N1, R, N1, BinOp).
+maplistss([E0|N0], [E1|N1], [R|Result], N1B, BinOp) :-
+    call(BinOp, E0, E1, R),
+    maplistss(N0, N1, Result, N1B, BinOp).
+
+% arithmetic functions as predicates
+add(N0,N1,R) :- R is N1+N0.
+sub(N0,N1,R) :- R is N1-N0.
+mul(N0,N1,R) :- R is N1*N0.
+dvd(N0,N1,R) :- R is N1/N0.
 pow(N0,N1,R) :- R is N1**N0.
 sqrt(N0,R) :- R is sqrt(N0).
 abs(N0,R) :- R is abs(N0).
-
 
 % print the whole stack
 print_s([E|Es]) :- print_se(E), print_s(Es).
@@ -121,7 +155,6 @@ parse(Token, u(Unknown)) :-
     atom_codes(Unknown, Token).
 
 % DCG
-:- use_module(library('dcg/basics')).
 
 line(Tokens) --> tokens(Tokens).
 tokens([]) --> blanks_to_nl, !.
@@ -135,10 +168,10 @@ parsed(p(s,SO)) --> stackop(SO), !.
 parsed(p(l,LO)) --> listop(LO), !.
 parsed(p(c,C)) --> command(C), !.
 
-arithop(+) --> "+".
-arithop(-) --> "-".
-arithop(*) --> "*".
-arithop(/) --> "/".
+arithop(add) --> "+".
+arithop(sub) --> "-".
+arithop(mul) --> "*".
+arithop(dvd) --> "/".
 arithop(pow) --> "pow".
 arithop(sqrt) --> "sqrt".
 arithop(abs) --> "abs".
