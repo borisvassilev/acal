@@ -1,37 +1,47 @@
 #!/home/boris/bin/swipl -q -g main -t halt(1) -s
-
 main :-
-    init(Stack),
-    loop(Stack),
-    cleanup.
+    init(S),
+    loop(S).
 
 init([]) :-
     prompt(_, '').
 
-cleanup :-
-    format('bye!~n').
+cleanup(S) :-
+    print_s(S).
 
 quit(end_of_file).
 
-loop(Stack) :-
+loop(S) :-
     prolog_current_frame(F),
     write(F), nl,
     read_line_to_codes(user_input, Codes),
-    (   quit(Codes) -> true
+    (   quit(Codes) -> cleanup(S) 
     ;   parse_line(Codes, Line),
-        reduce_stack([Line|Stack], NewStack),
-        format('~w~n', [NewStack]),
-        loop(NewStack)
+        reduce_stack([Line|S], NewS), !,
+        /* DEBUG */ format('~w~n', [NewS]),
+        loop(NewS)
     ).
 
-reduce_stack([e(Type,Content)|Rest], NewStack) :-
-    rs(Type, Content, Rest, NewStack), !.
+reduce_stack([e(Type,Content)|Rest], NewS) :-
+    reduce_type(Type, Content, Rest, NewS).
 reduce_stack([error|Rest], Rest).
+% if the stack can't be reduced, for example numbers on top
+reduce_stack(S, S).
 
-rs(s, top, [Top|Rest], [Top|Rest]) :- print_se(Top).
-rs(s, show, Stack, Stack) :- write(Stack), nl, print_s(Stack).
-% a temporary catch-all
-rs(Type, Content, Stack, [e(Type,Content)|Stack]).
+reduce_type(a, ArithOp, S, NewS) :- do_arithop(ArithOp, S, NewS).
+reduce_type(s, StackOp, S, NewS) :- do_stackop(StackOp, S, NewS).
+reduce_type(l, ListOp, S, NewS) :- do_listop(ListOp, S, NewS).
+reduce_type(c, _Command, S, S). % for now...
+% not necessary? reduce_type(n, _N, S, S).
+
+do_stackop(top, [Top|S], [Top|S]) :- print_se(Top).
+do_stackop(show, S, S) :- print_s(S).
+do_stackop(swap, [E0,E1|S], NewS) :- reduce_stack([E1,E0|S], NewS).
+do_stackop(duplicate, [Top|S], [Top,Top|S]).
+do_stackop(pop, [Top|S], S) :- print_se(Top).
+do_stackop(revstack, S, NewS) :- reverse(S, RS), reduce_stack(RS, NewS).
+do_stackop(clear, [], [e(s,clear)]) :- !. % watch out for this possibility
+do_stackop(clear, _S, []).
 
 % print the whole stack
 print_s([E|Es]) :- print_se(E), print_s(Es).
