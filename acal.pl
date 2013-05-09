@@ -38,6 +38,7 @@ reduce_type(l, ListOp, S, NewS) :- do_listop(ListOp, S, NewS).
 reduce_type(c, _Command, S, S). % for now...
 % not necessary? reduce_type(n, _N, S, S).
 
+% do stack operations
 do_stackop(top, [Top|S], [Top|S]) :- print_se(Top).
 do_stackop(show, S, S) :- print_s(S).
 do_stackop(swap, [E0,E1|S], NewS) :- reduce_stack([E1,E0|S], NewS).
@@ -47,6 +48,7 @@ do_stackop(revstack, S, NewS) :- reverse(S, RS), reduce_stack(RS, NewS).
 do_stackop(clear, [], [e(s,clear)]) :- !. % watch out for this possibility
 do_stackop(clear, _S, []).
 
+% do list operations
 do_listop(len, [e(n,N)|S], [e(n,[Len]),e(n,N)|S]) :- length(N,Len).
 do_listop(sum, [e(n,N)|S], [e(n,[Sum]),e(n,N)|S]) :- sum_list(N,Sum).
 do_listop(prod, [e(n,N)|S], [e(n,[Prod]),e(n,N)|S]) :- foldl(*,N,1,Prod).
@@ -59,10 +61,15 @@ do_listop(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N,RN).
 do_listop(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
 
 
+% arithmetic operations as predicates
 +(N0,N1,R) :- R is N1+N0.
 -(N0,N1,R) :- R is N1-N0.
 *(N0,N1,R) :- R is N1*N0.
 /(N0,N1,R) :- R is N1/N0.
+pow(N0,N1,R) :- R is N1**N0.
+sqrt(N0,R) :- R is sqrt(N0).
+abs(N0,R) :- R is abs(N0).
+
 
 % print the whole stack
 print_s([E|Es]) :- print_se(E), print_s(Es).
@@ -77,15 +84,13 @@ print_se(_Type, Name) :- format('~w~n', [Name]).
 print_ns([], Last) :- format('~w~n', [Last]).
 print_ns([N|Ns], Prev) :- format('~w ', [Prev]), print_ns(Ns, N).
 
-% Codes are the codes of one line from input,
-% Line is a stack element
+% Codes are the codes of one line from input, Line is a stack element
 parse_line(Codes, Line) :-
     tokenize(Codes, Tokens),
     maplist(parse, Tokens, Parsed),
     normalize(Parsed, Line).
 
-% Parsed is a list of parsed tokens,
-% Line is a stack element
+% Parsed is a list of parsed tokens, Line is a stack element
 normalize(Parsed, Line) :-
     (   Parsed = [] -> Line = empty
     ;   Parsed = [p(Type,Content)|Rest],
@@ -115,6 +120,7 @@ parse(Token, Parsed) :-
 parse(Token, u(Unknown)) :-
     atom_codes(Unknown, Token).
 
+% DCG
 :- use_module(library('dcg/basics')).
 
 line(Tokens) --> tokens(Tokens).
@@ -133,6 +139,9 @@ arithop(+) --> "+".
 arithop(-) --> "-".
 arithop(*) --> "*".
 arithop(/) --> "/".
+arithop(pow) --> "pow".
+arithop(sqrt) --> "sqrt".
+arithop(abs) --> "abs".
 
 stackop(top) --> "top".
 stackop(show) --> "show".
