@@ -22,6 +22,10 @@ loop(S) :-
         loop(NewS)
     ).
 
+/* TODO */
+% make it possible to push operators and values
+% to the stack directly from the program
+
 reduce_stack([e(Type,Content)|Rest], NewS) :-
     reduce_type(Type, Content, Rest, NewS).
 reduce_stack([error|Rest], Rest).
@@ -42,6 +46,23 @@ do_stackop(pop, [Top|S], S) :- print_se(Top).
 do_stackop(revstack, S, NewS) :- reverse(S, RS), reduce_stack(RS, NewS).
 do_stackop(clear, [], [e(s,clear)]) :- !. % watch out for this possibility
 do_stackop(clear, _S, []).
+
+do_listop(len, [e(n,N)|S], [e(n,[Len]),e(n,N)|S]) :- length(N,Len).
+do_listop(sum, [e(n,N)|S], [e(n,[Sum]),e(n,N)|S]) :- sum_list(N,Sum).
+do_listop(prod, [e(n,N)|S], [e(n,[Prod]),e(n,N)|S]) :- foldl(*,N,1,Prod).
+do_listop(mean, [e(n,N)|S], [e(n,[Mean]),e(n,N)|S]) :-
+    length(N,Len),
+    sum_list(N,Sum),
+    Mean is Sum/Len.
+do_listop(sort, [e(n,N)|S], [e(n,SN)|S]) :- sort(N,SN).
+do_listop(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N,RN).
+do_listop(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
+
+
++(N0,N1,R) :- R is N1+N0.
+-(N0,N1,R) :- R is N1-N0.
+*(N0,N1,R) :- R is N1*N0.
+/(N0,N1,R) :- R is N1/N0.
 
 % print the whole stack
 print_s([E|Es]) :- print_se(E), print_s(Es).
@@ -123,5 +144,11 @@ stackop(clear) --> "clear".
 
 listop(len) --> "len".
 listop(sum) --> "sum".
+listop(prod) --> "prod".
+listop(mean) --> "mean".
+%listop(median) --> "median".
+listop(sort) --> "sort".
+listop(rev) --> "rev".
+listop(shuffle) --> "shuffle".
 
 command(quit) --> "quit".
