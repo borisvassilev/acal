@@ -15,8 +15,8 @@ cleanup(S) :-
 quit(end_of_file).
 
 loop(S) :-
-    /* DEBUG */ prolog_current_frame(F),
-                write(F), nl,
+    %/* DEBUG */ prolog_current_frame(F),
+    %write(F), nl,
     read_line_to_codes(user_input, Codes),
     (   quit(Codes) -> cleanup(S) 
     ;   parse_line(Codes, Line),
@@ -32,6 +32,7 @@ loop(S) :-
 reduce_stack([e(Type,Content)|Rest], NewS) :-
     reduce_type(Type, Content, Rest, NewS).
 reduce_stack([error|Rest], Rest).
+reduce_stack([empty|Rest], Rest).
 % if the stack can't be reduced, for example numbers on top
 reduce_stack(S, S).
 
@@ -65,17 +66,18 @@ do_listop(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
 
 do_arithop(BinO, [e(n,N0),e(n,N1)|S], [e(n,R)|S]) :-
     binary_arith_op(BinO), !,
-    mapbinop(BinO, N0, N1, R).
+    mapbinop(BinO, N0, N1, R),
+    print_ns(R).
 do_arithop(UnO, [e(n,N)|S], [e(n,R)|S]) :-
     unary_arith_op(UnO), !,
-    maplist(UnO, N, R).
+    maplist(UnO, N, R),
+    print_ns(R).
 
 % binary and unary arithmetic operators
 binary_arith_op(BinO) :- memberchk(BinO, [add,sub,mul,dvd,pow]).
-unary_arith_op(UnO) :- memberchk(UnO, [sqrt,abs]).
+unary_arith_op(UnO) :- memberchk(UnO, [sqr,abs]).
 
 % map binary op to lists with different length
-% mapbinop(:BinOp, +List1, +List2, -Result)
 mapbinop(BinOp, N0, N1, Result) :-
     length(N0,L0), length(N1,L1),
     compare(C,L0,L1),
@@ -102,7 +104,7 @@ sub(N0,N1,R) :- R is N1-N0.
 mul(N0,N1,R) :- R is N1*N0.
 dvd(N0,N1,R) :- R is N1/N0.
 pow(N0,N1,R) :- R is N1**N0.
-sqrt(N0,R) :- R is sqrt(N0).
+sqr(N0,R) :- R is sqrt(N0).
 abs(N0,R) :- R is abs(N0).
 
 % print the whole stack
@@ -111,10 +113,15 @@ print_s([]).
 
 % print stack element
 print_se(e(Type, Content)) :- print_se(Type, Content), !.
-print_se(n, [N|Ns]) :- print_ns(Ns, N).
+print_se(n, N) :- print_ns(N).
+% because arithmetic operators are represented differently internally
+print_se(a, Op) :- phrase( arithop(Op), String), format('~s~n', [String]).
+% catch-all clause, for now
 print_se(_Type, Name) :- format('~w~n', [Name]).
 
 % print a list of numbers on a line
+% a list of numbers is guaranteed to have at least one element!
+print_ns([N|Ns]) :- print_ns(Ns, N).
 print_ns([], Last) :- format('~w~n', [Last]).
 print_ns([N|Ns], Prev) :- format('~w ', [Prev]), print_ns(Ns, N).
 
@@ -173,7 +180,7 @@ arithop(sub) --> "-".
 arithop(mul) --> "*".
 arithop(dvd) --> "/".
 arithop(pow) --> "pow".
-arithop(sqrt) --> "sqrt".
+arithop(sqr) --> "sqrt".
 arithop(abs) --> "abs".
 
 stackop(top) --> "top".
