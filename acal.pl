@@ -30,20 +30,24 @@ loop(S) :-
 % make it possible to push operators and values
 % to the stack directly from the program
 
+
 %% Reduce the current stack %%
 
 reduce_stack([e(Type,Content)|Rest], NewS) :- % unpack the arguments
-    reduce_type(Type, Content, Rest, NewS).
+    reduce_stack(Type, Content, Rest, NewS).
 reduce_stack([error|Rest], Rest). % ignore for now
 reduce_stack([empty|Rest], Rest). % igonre this one too
 reduce_stack(S, S). % the stack could not be reduced
 
 % Delegate depending on stack element type
-reduce_type(a, ArithOp, S, NewS) :- do_arithop(ArithOp, S, NewS).
-reduce_type(s, StackOp, S, NewS) :- do_stackop(StackOp, S, NewS).
-reduce_type(l, ListOp, S, NewS) :- do_listop(ListOp, S, NewS).
-reduce_type(c, _Command, S, S). % for now...
-% will fail if numbers
+reduce_stack(a, ArithOp, S, [R|NewS]) :-
+    do_arithop(ArithOp, S, R, NewS), print_se(R).
+reduce_stack(s, StackOp, S, NewS) :-
+    do_stackop(StackOp, S, NewS).
+reduce_stack(l, ListOp, S, [R|NewS]) :-
+    do_listop(ListOp, S, R, NewS), print_se(R).
+reduce_stack(c, _Command, S, S). % for now...
+% will fail if numbers on top of stack
 
 % Do stack operations
 do_stackop(top, [Top|S], [Top|S]) :- print_se(Top).
@@ -56,26 +60,29 @@ do_stackop(clear, [], [e(s,clear)]) :- !. % watch out for this possibility
 do_stackop(clear, _S, []).
 
 % Do list operations
-do_listop(len, [e(n,N)|S], [e(n,[Len]),e(n,N)|S]) :- length(N,Len).
-do_listop(sum, [e(n,N)|S], [e(n,[Sum]),e(n,N)|S]) :- sum_list(N,Sum).
-do_listop(prod, [e(n,N)|S], [e(n,[Prod]),e(n,N)|S]) :- foldl(mul,N,1,Prod).
-do_listop(mean, [e(n,N)|S], [e(n,[Mean]),e(n,N)|S]) :-
+do_listop(len, [e(n,N)|S], e(n,[Len]), [e(n,N)|S]) :- length(N,Len).
+do_listop(sum, [e(n,N)|S], e(n,[Sum]), [e(n,N)|S]) :- sum_list(N,Sum).
+do_listop(prod, [e(n,N)|S], e(n,[Prod]), [e(n,N)|S]) :- foldl(mul,N,1,Prod).
+do_listop(mean, [e(n,N)|S], e(n,[Mean]), [e(n,N)|S]) :-
     length(N,Len),
     sum_list(N,Sum),
     Mean is Sum/Len.
-do_listop(sort, [e(n,N)|S], [e(n,SN)|S]) :- sort(N,SN).
-do_listop(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N,RN).
-do_listop(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
+do_listop(median, [e(n,N)|S], e(n,[Median]), [e(n,N)|S]) :-
+    %sort(N,SN),
+    %length(SN,Len),
+    %Mod is Len mod 2, Middle is Len div 2,
+    /* TODO */ Median is 0.
+do_listop(sort, [e(n,N)|S], e(n,SN), S) :- sort(N,SN).
+do_listop(rev, [e(n,N)|S], e(n,RN), S) :- reverse(N,RN).
+do_listop(shuffle, [e(n,N)|S], e(n,SN), S) :- random_permutation(N,SN).
 
 % Do arithmetic operations
-do_arithop(BinO, [e(n,N0),e(n,N1)|S], [e(n,R)|S]) :- % binary operator
+do_arithop(BinO, [e(n,N0),e(n,N1)|S], e(n,R), S) :- % binary operator
     phrase( arithop(BinO, 2), _ ), !, % check arity
-    mapbinop(BinO, N0, N1, R),
-    print_ns(R).
-do_arithop(UnO, [e(n,N)|S], [e(n,R)|S]) :- % unary operator
+    mapbinop(BinO, N0, N1, R).
+do_arithop(UnO, [e(n,N)|S], e(n,R), S) :- % unary operator
     phrase( arithop(UnO, 1), _ ), !, % check arity
-    maplist(UnO, N, R),
-    print_ns(R).
+    maplist(UnO, N, R).
 
 % Map binary op to lists with different length
 mapbinop(BinOp, N0, N1, Result) :-
@@ -185,7 +192,7 @@ listop(len) --> "len".
 listop(sum) --> "sum".
 listop(prod) --> "prod".
 listop(mean) --> "mean".
-/* TODO */ %listop(median) --> "median".
+listop(median) --> "median".
 listop(sort) --> "sort".
 listop(rev) --> "rev".
 listop(shuffle) --> "shuffle".
