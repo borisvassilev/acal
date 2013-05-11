@@ -8,6 +8,7 @@ main :-
     halt(1).
 
 init([]) :-
+    nb_setval(float_precision, 3),
     prompt(_, '').
 
 cleanup(S) :-
@@ -17,13 +18,13 @@ quit(end_of_file).
 
 % Evaluation loop of the calculator with the stack as an argument
 loop(S) :-
-    /* DEBUG */ prolog_current_frame(F),
-    write(F), nl,
+    %/* DEBUG */ prolog_current_frame(F),
+    %write(F), nl,
     read_line_to_codes(user_input, Codes),
     (   quit(Codes) -> cleanup(S)
     ;   parse_line(Codes, Line), 
         reduce_stack([Line|S], NewS),
-        /* DEBUG */ format('~w~n', [NewS]),
+        %/* DEBUG */ format('~w~n', [NewS]),
         !, loop(NewS)
     ).
 
@@ -142,8 +143,14 @@ print_se(_Type, Name) :- format('~w~n', [Name]).
 % a list of numbers is guaranteed to have at least one element!
 print_ns([N|Ns]) :- print_ns(Ns, N).
 
-print_ns([N|Ns], Prev) :- format('~w ', [Prev]), print_ns(Ns, N).
-print_ns([], Last) :- format('~w~n', [Last]).
+print_ns([N|Ns], Prev) :- print_n(Prev), format(' '), print_ns(Ns, N).
+print_ns([], Last) :- print_n(Last), format('~n').
+
+print_n(Int) :- integer(Int), format('~d', [Int]).
+print_n(Float) :- float(Float),
+    nb_getval(float_precision, P),
+    atomic_list_concat(['~', P, 'f'], FmtStr),
+    format(FmtStr, [Float]).
 
 %% Input %%
 
