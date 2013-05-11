@@ -16,8 +16,8 @@ quit(end_of_file).
 
 % Evaluation loop of the calculator with the stack as an argument
 loop(S) :-
-    %/* DEBUG */ prolog_current_frame(F),
-    %write(F), nl,
+    /* DEBUG */ prolog_current_frame(F),
+    write(F), nl,
     read_line_to_codes(user_input, Codes),
     (   quit(Codes) -> cleanup(S) 
     ;   parse_line(Codes, Line), 
@@ -195,17 +195,12 @@ command(quit) --> "quit".
 % From a list of parsed, tagged elements, make a valid stack element
 normalize(Parsed, Line) :-
     (   Parsed = [] -> Line = empty
-    ;   Parsed = [p(Type,Content)|Rest],
-        normalize(Type, Content, Rest, Line) -> true
-    ;   Line = error
+    ;   Parsed = [p(n,N)|Ns] % numbers
+    ->  nvalues(Ns, N, NList), Line = e(n, NList)
+    ;   Parsed = [p(Type, Content)] % an operator or command
+    ->  Line = e(Type, Content)
+    ;   Line = error % validation failed
     ).
-
-normalize(a, AO, [], e(a,AO)). % arithmetic operator
-normalize(s, SO, [], e(s,SO)). % stack operator
-normalize(l, LO, [], e(l,LO)). % list operator
-normalize(c, C,  [], e(c,C)).  % command
-normalize(n, N, More, e(n,Ns)) :- % list of numbers
-    nvalues(More, N, Ns).
 
 % convert a list of parsed, tagged numbers to a list of numbers
 nvalues([], N, [N]).
