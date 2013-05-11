@@ -1,10 +1,11 @@
-#!/home/boris/bin/swipl -q -g main -t halt(1) -s
+#!/home/boris/bin/swipl -q -t main -f
 
 :- use_module(library('dcg/basics')).
 
 main :-
     init(S),
-    loop(S).
+    loop(S),
+    halt(1).
 
 init([]) :-
     prompt(_, '').
@@ -19,7 +20,7 @@ loop(S) :-
     /* DEBUG */ prolog_current_frame(F),
     write(F), nl,
     read_line_to_codes(user_input, Codes),
-    (   quit(Codes) -> cleanup(S) 
+    (   quit(Codes) -> cleanup(S)
     ;   parse_line(Codes, Line), 
         reduce_stack([Line|S], NewS),
         /* DEBUG */ format('~w~n', [NewS]),
@@ -68,10 +69,14 @@ do_listop(mean, [e(n,N)|S], e(n,[Mean]), [e(n,N)|S]) :-
     sum_list(N,Sum),
     Mean is Sum/Len.
 do_listop(median, [e(n,N)|S], e(n,[Median]), [e(n,N)|S]) :-
-    %sort(N,SN),
-    %length(SN,Len),
-    %Mod is Len mod 2, Middle is Len div 2,
-    /* TODO */ Median is 0.
+    sort(N,SN),
+    length(SN,Len),
+    Mod is Len mod 2, Middle is Len div 2,
+    (   Mod =:= 1 -> nth0(Middle, N, Median)
+    ;   nth0(Middle, N, Above),
+        nth1(Middle, N, Below),
+        Median is (Above+Below)/2
+    ).
 do_listop(sort, [e(n,N)|S], e(n,SN), S) :- sort(N,SN).
 do_listop(rev, [e(n,N)|S], e(n,RN), S) :- reverse(N,RN).
 do_listop(shuffle, [e(n,N)|S], e(n,SN), S) :- random_permutation(N,SN).
