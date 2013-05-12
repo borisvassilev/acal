@@ -58,7 +58,7 @@ do_stackop(swap, [E0,E1|S], NewS) :- reduce_stack([E1,E0|S], NewS).
 do_stackop(duplicate, [Top|S], [Top,Top|S]).
 do_stackop(pop, [Top|S], S) :- print_se(Top).
 do_stackop(revstack, S, NewS) :- reverse(S, RS), reduce_stack(RS, NewS).
-do_stackop(clear, [], [e(s,clear)]) :- !. % watch out for this possibility
+%do_stackop(clear, [], [e(s,clear)]) :- !. % watch out for this possibility
 do_stackop(clear, _S, []).
 
 % Do list operations
@@ -81,6 +81,18 @@ do_listop(median, [e(n,N)|S], [Median], [e(n,N)|S]) :-
 do_listop(sort, [e(n,N)|S], SN, S) :- sort(N,SN).
 do_listop(rev, [e(n,N)|S], RN, S) :- reverse(N,RN).
 do_listop(shuffle, [e(n,N)|S], SN, S) :- random_permutation(N,SN).
+
+% subsequence extracts a subsequence from an existing list
+% [1] is the list, [0] holds the arguments to the function
+% X :- X >= 0
+%   first X elements of [1] (or the whole, if X > Len)
+% X :- X < 0
+%   last X elements of [1]
+% From,To :- [From-To) elements of [0], indices are 0-based
+%   negative means counting from the back
+% From,Step,Len :- Every Step'th element starting at From
+%   altogether at most Len elements
+%
 
 % Do arithmetic operations
 do_arithop(BinO, [e(n,N0),e(n,N1)|S], R, S) :- % binary operator
@@ -148,9 +160,10 @@ print_ns([], Last) :- print_n(Last), format('~n').
 
 print_n(Int) :- integer(Int), format('~d', [Int]).
 print_n(Float) :- float(Float),
-    nb_getval(float_precision, P),
-    atomic_list_concat(['~', P, 'f'], FmtStr),
-    format(FmtStr, [Float]).
+    format('~g', [Float]).
+%nb_getval(float_precision, P),
+%atomic_list_concat(['~', P, 'f'], FmtStr),
+%format(FmtStr, [Float]).
 
 %% Input %%
 
