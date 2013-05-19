@@ -4,29 +4,24 @@
 
 main :-
     init(S),
-    loop(S),
-    halt(1).
+    loop(S).
 
 init([]) :-
-    nb_setval(float_precision, 3),
     prompt(_, '').
 
-cleanup(S) :-
-    print_s(S).
-
-quit(end_of_file).
+quit(S) :-
+    print_s(S),
+    halt(1).
 
 % Evaluation loop of the calculator with the stack as an argument
 loop(S) :-
     /* DEBUG */ prolog_current_frame(F),
     write(F), nl,
     read_line_to_codes(user_input, Codes),
-    (   quit(Codes) -> cleanup(S)
-    ;   parse_line(Codes, Line), 
-        reduce_stack([Line|S], NewS),
-        /* DEBUG */ format('~w~n', [NewS]),
-        !, loop(NewS)
-    ).
+    parse_line(Codes, Line), 
+    reduce_stack([Line|S], NewS),
+    /* DEBUG */ format('~w~n', [NewS]),
+    !, loop(NewS).
 
 /* TODO */
 % make it possible to push operators and values
@@ -34,7 +29,7 @@ loop(S) :-
 
 
 %% Reduce the current stack %%
-
+reduce_stack([quit|S], S) :- quit(S).
 reduce_stack([e(c,Command)|Rest], NewS) :- % unpack the arguments
     do_command(Command, Rest, NewS).
 reduce_stack([error|Rest], Rest). % ignore for now
@@ -42,11 +37,11 @@ reduce_stack([empty|Rest], Rest). % ignore this one too
 reduce_stack(S, S). % the stack could not be reduced
 
 % Do stack operations
-do_command(top, [Top|S], [Top|S]) :- print_se(Top).
+do_command(top, [e(T,C)|S], [e(T,C)|S]) :- print_se(T,C).
 do_command(show, S, S) :- print_s(S).
 do_command(swap, [E0,E1|S], NewS) :- reduce_stack([E1,E0|S], NewS).
 do_command(duplicate, [Top|S], [Top,Top|S]).
-do_command(pop, [Top|S], S) :- print_se(Top). % push to register
+do_command(pop, [e(T,C)|S], S) :- print_se(T,C). % push to register
 % do_command(push, ...)
 do_command(revstack, S, NewS) :- reverse(S, RS), reduce_stack(RS, NewS).
 do_command(clear, _S, []).
@@ -99,7 +94,7 @@ mapbinop(BinOp, N0, N1, Result) :-
     compare(C,L0,L1),
     eq_len(C,L0,N0,L1,N1,NewN0,NewN1), % could fail!
     maplist(BinOp, NewN0, NewN1, Result).
-    
+% Make the two lists the same length
 eq_len(=,_,N0,_,N1,N0,N1).
 eq_len(<,L0,N0,L1,N1,NewN0,N1) :-
     0 =:= L1 rem L0,
@@ -109,6 +104,7 @@ eq_len(>,L0,N0,L1,N1,N0,NewN1) :-
     0 =:= L0 rem L1,
     Times is L0 div L1,
     rep(N1,Times,NewN1).
+% Repeat a list
 rep(List, Times, RepList) :-
     findall(List, between(1,Times,_), Ls),
     append(Ls, RepList).
@@ -151,6 +147,7 @@ print_n(Float) :- float(Float),
 %% Input %%
 
 % From a line of input, make a stack element
+parse_line(end_of_file, quit).
 parse_line(Codes, Line) :-
     tokenize(Codes, Tokens), 
     maplist(parse, Tokens, Parsed),
@@ -177,6 +174,7 @@ parsed(parsed(n,N)) --> number(N), !. % using `number` from dcg/basics
 parsed(parsed(c,C)) --> command(C), !.
 % will fail if the the token is not recognized
 
+% Arithmetic operators
 command(add) --> "+".
 command(sub) --> "-".
 command(mul) --> "*".
@@ -184,7 +182,8 @@ command(dvd) --> "/".
 command(pow) --> "pow".
 command(sqr) --> "sqrt".
 command(abs) --> "abs".
-
+% you can put these in a list probably...
+% Stack operators
 command(top) --> "top".
 command(show) --> "show".
 command(swap) --> "swap".
@@ -192,7 +191,7 @@ command(duplicate) --> "duplicate".
 command(pop) --> "pop".
 command(revstack) --> "revstack".
 command(clear) --> "clear".
-
+% List operators
 command(len) --> "len".
 command(sum) --> "sum".
 command(prod) --> "prod".
@@ -202,7 +201,7 @@ command(sort) --> "sort".
 command(set) --> "set".
 command(rev) --> "rev".
 command(shuffle) --> "shuffle".
-
+% Commands
 command(quit) --> "quit".
 
 % From a list of parsed, tagged elements, make a valid stack element
