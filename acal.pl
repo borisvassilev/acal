@@ -55,18 +55,19 @@ do_command(mean, [e(n,N)|S], [e(n,[Mean]),e(n,N)|S]) :-
     sum_list(N,Sum),
     Mean is Sum/Len.
 do_command(median, [e(n,N)|S], [e(n,[Median]),e(n,N)|S]) :-
-    sort(N,SN),
+    msort(N,SN),
     length(SN,Len),
     Mod is Len mod 2, Middle is Len div 2,
-    (   Mod =:= 1 -> nth0(Middle, N, Median)
-    ;   nth0(Middle, N, Above),
-        nth1(Middle, N, Below),
+    (   Mod =:= 1 -> nth0(Middle, SN, Median)
+    ;   nth0(Middle, SN, Above),
+        nth1(Middle, SN, Below),
         Median is (Above+Below)/2
     ).
 do_command(sort, [e(n,N)|S], [e(n,SN)|S]) :- msort(N,SN).
 do_command(set, [e(n,N)|S], [e(n,SN)|S]) :- sort(N,SN).
 do_command(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N,RN).
 do_command(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
+do_command(bind, [e(n,N0),e(n,N1)|S], [e(n,B)|S]) :- append(N1,N0,B).
 
 % subsequence extracts a subsequence from an existing list
 % [1] is the list, [0] holds the arguments to the function
@@ -83,10 +84,12 @@ do_command(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
 % Do arithmetic operations
 do_command(BinOp, [e(n,N0),e(n,N1)|S], [e(n,R)|S]) :-
     memberchk(BinOp, [add,sub,mul,dvd,pow]), % binary operator
-    mapbinop(BinOp, N0, N1, R).
+    mapbinop(BinOp, N0, N1, R),
+    print_ns(R).
 do_command(UnOp, [e(n,N)|S], [e(n,R)|S]) :-
-    memberchk(UnOp, [sqrt,abs]), % unary operator
-    maplist(UnOp, N, R).
+    memberchk(UnOp, [sqr,abs]), % unary operator
+    maplist(UnOp, N, R),
+    print_ns(R).
 
 % Map binary op to lists with different length
 mapbinop(BinOp, N0, N1, Result) :-
@@ -97,11 +100,11 @@ mapbinop(BinOp, N0, N1, Result) :-
 % Make the two lists the same length
 eq_len(=,_,N0,_,N1,N0,N1).
 eq_len(<,L0,N0,L1,N1,NewN0,N1) :-
-    0 =:= L1 rem L0,
+    0 =:= L1 mod L0,
     Times is L1 div L0,
     rep(N0,Times,NewN0).
 eq_len(>,L0,N0,L1,N1,N0,NewN1) :-
-    0 =:= L0 rem L1,
+    0 =:= L0 mod L1,
     Times is L0 div L1,
     rep(N1,Times,NewN1).
 % Repeat a list
@@ -201,6 +204,7 @@ command(sort) --> "sort".
 command(set) --> "set".
 command(rev) --> "rev".
 command(shuffle) --> "shuffle".
+command(bind) --> "bind".
 % Commands
 command(quit) --> "quit".
 
