@@ -70,8 +70,7 @@ do_command(set, [e(n,N)|S], [e(n,SN)|S]) :- sort(N,SN).
 do_command(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N,RN).
 do_command(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
 do_command(bind, [e(n,N0),e(n,N1)|S], [e(n,B)|S]) :- append(N1,N0,B).
-do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :-
-    integer(N), N > 0,
+do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :- integer(N), N > 0,
     length(Ns, N), append(Ns, Rest, S),
     maplist(stacked_nvals, Ns, ExtrNs),
     reverse(ExtrNs, RevExtrNs),
@@ -97,18 +96,18 @@ eq_len(N0, N1, NewN0, NewN1) :-
     compare(C, L0, L1),
     eq_len(C, N0, L0, N1, L1, NewN0, NewN1).
 eq_len((=), _, N0, _, N1, N0, N1).
-eq_len((<), L0, N0, L1, N1, NewN0, N1) :-
-    0 =:= L1 mod L0, Times is L1 div L0,
+eq_len((<), L0, N0, L1, N1, NewN0, N1) :- 0 =:= L1 mod L0,
+    Times is L1 div L0,
     rep(N0, Times, NewN0).
-eq_len((>), L0, N0, L1, N1, N0, NewN1) :-
-    0 =:= L0 mod L1, Times is L0 div L1,
+eq_len((>), L0, N0, L1, N1, N0, NewN1) :- 0 =:= L0 mod L1,
+    Times is L0 div L1,
     rep(N1, Times, NewN1).
 % Repeat a list
 rep(List, Times, RepList) :-
     findall(List, between(1,Times,_), Ls),
     append(Ls, RepList).
 
-% Arithmetic functions as predicates
+%% Math helper predicates %%
 add(N0,N1,R) :- R is N1+N0.
 sub(N0,N1,R) :- R is N1-N0.
 mul(N0,N1,R) :- R is N1*N0.
@@ -117,15 +116,13 @@ pow(N0,N1,R) :- R is N1**N0.
 sqr(N0,R) :- R is sqrt(N0).
 abs(N0,R) :- R is abs(N0).
 
-int_range(From, To, Range) :-
-    (   From < To
-    ->  To0 is To - 1,
-        numlist(From, To0, Range)
-    ;   To < From
-    ->  To1 is To + 1,
-        numlist(To1, From, RRange),
-        reverse(RRange, Range)
-    ).
+int_range(From, To, Range) :- From < To
+    To0 is To - 1,
+    numlist(From, To0, Range).
+int_range(From, To, Range) :- To < From
+    To1 is To + 1,
+    numlist(To1, From, RRange),
+    reverse(RRange, Range).
 
 
 %% Output %%
