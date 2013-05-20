@@ -16,11 +16,11 @@ quit(S) :-
 % Evaluation loop of the calculator with the stack as an argument
 loop(S) :-
     /* DEBUG */ prolog_current_frame(F),
-    write(F), nl,
+                write(F), nl,
     read_line_to_codes(user_input, Codes),
     parse_line(Codes, Line), 
+    /* DEBUG */ format('~w~n', [[Line|S]]),
     reduce_stack([Line|S], NewS),
-    /* DEBUG */ format('~w~n', [NewS]),
     !, loop(NewS).
 
 /* TODO */
@@ -68,6 +68,12 @@ do_command(set, [e(n,N)|S], [e(n,SN)|S]) :- sort(N,SN).
 do_command(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N,RN).
 do_command(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
 do_command(bind, [e(n,N0),e(n,N1)|S], [e(n,B)|S]) :- append(N1,N0,B).
+do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :-
+    integer(N), N > 0,
+    length(Ns, N), append(Ns, Rest, S),
+    maplist(stacked_nvals, Ns, ExtrNs),
+    reverse(ExtrNs, RevExtrNs),
+    append(RevExtrNs,BoundNs).
 
 % subsequence extracts a subsequence from an existing list
 % [1] is the list, [0] holds the arguments to the function
@@ -205,17 +211,20 @@ command(set) --> "set".
 command(rev) --> "rev".
 command(shuffle) --> "shuffle".
 command(bind) --> "bind".
+command(nbind) --> "nbind".
 % Commands
 command(quit) --> "quit".
 
 % From a list of parsed, tagged elements, make a valid stack element
 normalize(Parsed, Line) :-
     (   Parsed = [] -> Line = empty
-    ;   maplist(nvalue, Parsed, NList)
+    ;   maplist(parsed_nvals, Parsed, NList)
     ->  Line = e(n, NList)
     ;   Parsed = [parsed(c, Command)] % a command
     ->  Line = e(c, Command)
     ;   Line = error % validation failed
     ).
-nvalue(parsed(n,N), N).
+
+parsed_nvals(parsed(n,N), N).
+stacked_nvals(e(n,N), N).
 
