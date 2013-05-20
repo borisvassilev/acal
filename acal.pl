@@ -70,7 +70,8 @@ do_command(set, [e(n,N)|S], [e(n,SN)|S]) :- sort(N,SN).
 do_command(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N,RN).
 do_command(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
 do_command(bind, [e(n,N0),e(n,N1)|S], [e(n,B)|S]) :- append(N1,N0,B).
-do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :- integer(N), N > 0,
+do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :-
+    integer(N), N > 0,
     length(Ns, N), append(Ns, Rest, S),
     maplist(stacked_nvals, Ns, ExtrNs),
     reverse(ExtrNs, RevExtrNs),
@@ -78,6 +79,9 @@ do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :- integer(N), N > 0,
 do_command(range, [e(n,[From,To])|S], [e(n,Range)|S]) :-
     integer(From), integer(To),
     int_range(From, To, Range).
+do_command(srange, [e(n,[From,Step,To])|S], [e(n,Range)|S]) :-
+    number(From), number(Step), number(To),
+    srange(From, Step, To, Range).
 
 % Do arithmetic operations
 do_command(BinOp, [e(n,N0),e(n,N1)|S], [e(n,R)|S]) :-
@@ -96,10 +100,12 @@ eq_len(N0, N1, NewN0, NewN1) :-
     compare(C, L0, L1),
     eq_len(C, N0, L0, N1, L1, NewN0, NewN1).
 eq_len((=), _, N0, _, N1, N0, N1).
-eq_len((<), L0, N0, L1, N1, NewN0, N1) :- 0 =:= L1 mod L0,
+eq_len((<), L0, N0, L1, N1, NewN0, N1) :-
+    0 =:= L1 mod L0,
     Times is L1 div L0,
     rep(N0, Times, NewN0).
-eq_len((>), L0, N0, L1, N1, N0, NewN1) :- 0 =:= L0 mod L1,
+eq_len((>), L0, N0, L1, N1, N0, NewN1) :-
+    0 =:= L0 mod L1,
     Times is L0 div L1,
     rep(N1, Times, NewN1).
 % Repeat a list
@@ -116,14 +122,25 @@ pow(N0,N1,R) :- R is N1**N0.
 sqr(N0,R) :- R is sqrt(N0).
 abs(N0,R) :- R is abs(N0).
 
-int_range(From, To, Range) :- From < To
-    To0 is To - 1,
-    numlist(From, To0, Range).
-int_range(From, To, Range) :- To < From
-    To1 is To + 1,
-    numlist(To1, From, RRange),
-    reverse(RRange, Range).
+int_range(From, To, Range) :-
+    (   From < To 
+    ->  srange((<), From, 1, To, From, Range)
+    ;   From > To
+    ->  srange((>), From, -1, To, From, Range)
+    ).
 
+srange(From, Step, To, Range) :-
+    (   From < To, Step > 0
+    ->  srange((<), From, Step, To, From, Range)
+    ;   From > To, Step < 0
+    ->  srange((>), From, Step, To, From, Range)
+    ).
+
+srange(Rel, From, Step, To, Current, [Current|Range]) :-
+    compare(Rel, Current, To),
+    Next is Current + Step,
+    !, srange(Rel, From, Step, To, Next, Range).
+srange(_,_,_,_,_,[]).
 
 %% Output %%
 
