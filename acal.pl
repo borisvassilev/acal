@@ -15,12 +15,13 @@ quit(S) :-
 
 % Evaluation loop of the calculator with the stack as an argument
 loop(S) :-
-    /* DEBUG */ prolog_current_frame(F),
-                write(F), nl,
+    %/* DEBUG */ prolog_current_frame(F),
+    %            write(F), nl,
     read_line_to_codes(user_input, Codes),
     parse_line(Codes, Line), 
-    /* DEBUG */ format('~w~n', [[Line|S]]),
+    /* DEBUG */ format('line: ~w~n', Line),
     reduce_stack([Line|S], NewS),
+    /* DEBUG */ format('reduced stack: ~w~n', [NewS]),
     !, loop(NewS).
 
 /* TODO */
@@ -41,7 +42,8 @@ do_command(top, [e(T,C)|S], [e(T,C)|S]) :- print_se(T,C).
 do_command(show, S, S) :- print_s(S).
 do_command(swap, [E0,E1|S], NewS) :- reduce_stack([E1,E0|S], NewS).
 do_command(duplicate, [Top|S], [Top,Top|S]).
-do_command(pop, [e(T,C)|S], S) :- print_se(T,C). % push to register
+/* TODO */  % pop to a register
+do_command(pop, [e(T,C)|S], S) :- print_se(T,C).
 % do_command(push, ...)
 do_command(revstack, S, NewS) :- reverse(S, RS), reduce_stack(RS, NewS).
 do_command(clear, _S, []).
@@ -74,45 +76,33 @@ do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :-
     maplist(stacked_nvals, Ns, ExtrNs),
     reverse(ExtrNs, RevExtrNs),
     append(RevExtrNs,BoundNs).
-
-% subsequence extracts a subsequence from an existing list
-% [1] is the list, [0] holds the arguments to the function
-% X :- X >= 0
-%   first X elements of [1] (or the whole, if X > Len)
-% X :- X < 0
-%   last X elements of [1]
-% From,To :- [From-To) elements of [0], indices are 0-based
-%   negative means counting from the back
-% From,Step,Len :- Every Step'th element starting at From
-%   altogether at most Len elements
-%
+do_command(range, [e(n,[From,To])|S], [e(n,Range)|S]) :-
+    integer(From), integer(To),
+    int_range(From, To, Range).
 
 % Do arithmetic operations
 do_command(BinOp, [e(n,N0),e(n,N1)|S], [e(n,R)|S]) :-
     memberchk(BinOp, [add,sub,mul,dvd,pow]), % binary operator
-    mapbinop(BinOp, N0, N1, R),
+    eq_len(N0,N1,NewN0,NewN1), % could fail!
+    maplist(BinOp, NewN0, NewN1, R),
     print_ns(R).
 do_command(UnOp, [e(n,N)|S], [e(n,R)|S]) :-
     memberchk(UnOp, [sqr,abs]), % unary operator
     maplist(UnOp, N, R),
     print_ns(R).
 
-% Map binary op to lists with different length
-mapbinop(BinOp, N0, N1, Result) :-
-    length(N0,L0), length(N1,L1),
-    compare(C,L0,L1),
-    eq_len(C,L0,N0,L1,N1,NewN0,NewN1), % could fail!
-    maplist(BinOp, NewN0, NewN1, Result).
 % Make the two lists the same length
-eq_len(=,_,N0,_,N1,N0,N1).
-eq_len(<,L0,N0,L1,N1,NewN0,N1) :-
-    0 =:= L1 mod L0,
-    Times is L1 div L0,
-    rep(N0,Times,NewN0).
-eq_len(>,L0,N0,L1,N1,N0,NewN1) :-
-    0 =:= L0 mod L1,
-    Times is L0 div L1,
-    rep(N1,Times,NewN1).
+eq_len(N0, N1, NewN0, NewN1) :-
+    length(N0, L0), length(N1, L1),
+    compare(C, L0, L1),
+    eq_len(C, N0, L0, N1, L1, NewN0, NewN1).
+eq_len((=), _, N0, _, N1, N0, N1).
+eq_len((<), L0, N0, L1, N1, NewN0, N1) :-
+    0 =:= L1 mod L0, Times is L1 div L0,
+    rep(N0, Times, NewN0).
+eq_len((>), L0, N0, L1, N1, N0, NewN1) :-
+    0 =:= L0 mod L1, Times is L0 div L1,
+    rep(N1, Times, NewN1).
 % Repeat a list
 rep(List, Times, RepList) :-
     findall(List, between(1,Times,_), Ls),
@@ -126,6 +116,17 @@ dvd(N0,N1,R) :- R is N1/N0.
 pow(N0,N1,R) :- R is N1**N0.
 sqr(N0,R) :- R is sqrt(N0).
 abs(N0,R) :- R is abs(N0).
+
+int_range(From, To, Range) :-
+    (   From < To
+    ->  To0 is To - 1,
+        numlist(From, To0, Range)
+    ;   To < From
+    ->  To1 is To + 1,
+        numlist(To1, From, RRange),
+        reverse(RRange, Range)
+    ).
+
 
 %% Output %%
 
@@ -212,6 +213,9 @@ command(rev) --> "rev".
 command(shuffle) --> "shuffle".
 command(bind) --> "bind".
 command(nbind) --> "nbind".
+command(range) --> "range".
+command(srange) --> "srange".
+command(lenrange) --> "lenrange".
 % Commands
 command(quit) --> "quit".
 
