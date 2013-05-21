@@ -109,7 +109,7 @@ eq_len(N0, N1, NewN0, NewN1) :-
     length(N0, L0), length(N1, L1),
     compare(C, L0, L1),
     eq_len(C, N0, L0, N1, L1, NewN0, NewN1).
-eq_len((=), _, N0, _, N1, N0, N1).
+eq_len((=), N0, _, N1, _, N0, N1).
 eq_len((<), N0, L0, N1, L1, NewN0, N1) :-
     0 =:= L1 mod L0,
     Times is L1 div L0,
