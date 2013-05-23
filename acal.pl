@@ -96,11 +96,11 @@ eq_len(N0, N1, NewN0, NewN1) :-
     length(N0, L0), length(N1, L1),
     compare(C, L0, L1),
     eq_len(C, N0, L0, N1, L1, NewN0, NewN1).
-eq_len((=), _, N0, _, N1, N0, N1).
-eq_len((<), L0, N0, L1, N1, NewN0, N1) :-
+eq_len((=), N0, _, N1, _, N0, N1).
+eq_len((<), N0, L0, N1, L1, NewN0, N1) :-
     0 =:= L1 mod L0, Times is L1 div L0,
     rep(N0, Times, NewN0).
-eq_len((>), L0, N0, L1, N1, N0, NewN1) :-
+eq_len((>), N0, L0, N1, L1, N0, NewN1) :-
     0 =:= L0 mod L1, Times is L0 div L1,
     rep(N1, Times, NewN1).
 % Repeat a list
@@ -215,7 +215,6 @@ command(bind) --> "bind".
 command(nbind) --> "nbind".
 command(range) --> "range".
 command(srange) --> "srange".
-command(lenrange) --> "lenrange".
 % Commands
 command(quit) --> "quit".
 
