@@ -78,7 +78,20 @@ do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :-
     append(RevExtrNs,BoundNs).
 do_command(range, [e(n,[From,To])|S], [e(n,Range)|S]) :-
     integer(From), integer(To),
-    int_range(From, To, Range).
+    (   From < To ->  srange(<, From, 1, To, From, Range)
+    ;   From > To ->  srange(>, From, -1, To, From, Range)
+    ).
+do_command(srange, [e(n,[From,Step,To])|S], [e(n,Range)|S]) :-
+    integer(From), integer(Step), integer(To),
+    (   From < To, Step > 0
+    ->  srange(<, From, Step, To, From, Range)
+    ;   From > To, Step < 0
+    ->  srange(>, From, Step, To, From, Range)
+    ).
+do_command(lrange, [e(n,[From,Step,Len])|S], [e(n,Range)|S]) :-
+    integer(From), integer(Step), integer(Len), Len > 0,
+    length(Range, Len),
+    lrange(Range, From, Step).
 
 % Do arithmetic operations
 do_command(BinOp, [e(n,N0),e(n,N1)|S], [e(n,R)|S]) :-
@@ -117,16 +130,17 @@ pow(N0,N1,R) :- R is N1**N0.
 sqr(N0,R) :- R is sqrt(N0).
 abs(N0,R) :- R is abs(N0).
 
-int_range(From, To, Range) :-
-    (   From < To
-    ->  To0 is To - 1,
-        numlist(From, To0, Range)
-    ;   To < From
-    ->  To1 is To + 1,
-        numlist(To1, From, RRange),
-        reverse(RRange, Range)
-    ).
+% Range functions
+srange(Rel, From, Step, To, Current, [Current|Range]) :-
+    call(Rel, Current, To),
+    Next is Current + Step,
+    !, srange(Rel, From, Step, To, Next, Range).
+srange(_,_,_,_,_,[]).
 
+lrange([], _, _).
+lrange([Current|Range], Current, Step) :-
+    Next is Current + Step,
+    lrange(Range, Next, Step).
 
 %% Output %%
 
@@ -215,6 +229,8 @@ command(bind) --> "bind".
 command(nbind) --> "nbind".
 command(range) --> "range".
 command(srange) --> "srange".
+command(lrange) --> "lrange".
+
 % Commands
 command(quit) --> "quit".
 
