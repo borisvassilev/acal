@@ -151,29 +151,19 @@ do_command(range, [e(n,[From,To])|S], [e(n,Range)|S]) :-
     (   From < To ->  srange(<, From, 1, To, From, Range)
     ;   From > To ->  srange(>, From, -1, To, From, Range)
     ).
-<<<<<<< HEAD
-do_command(srange, [e(n,[From,Step,To])|S], [e(n,Range)|S]) :-
-=======
 
 % Make a list of integers [From, From+Step, ..., To)
 do_command(srange, [e(n,[From,Step,To])|S], [e(n,Range)|S]) :-
     integer(From), integer(Step), integer(To),
->>>>>>> back_to_float
     (   From < To, Step > 0
     ->  srange(<, From, Step, To, From, Range)
     ;   From > To, Step < 0
     ->  srange(>, From, Step, To, From, Range)
     ).
-<<<<<<< HEAD
-do_command(lrange, [e(n,[From,Step,Len])|S], [e(n,Range)|S]) :-
-    integer(Len), Len > 0,
-    Step =\= 0,
-=======
 
 % Make a list of integers [From, From+Step, ...) of length Len
 do_command(lrange, [e(n,[From,Step,Len])|S], [e(n,Range)|S]) :-
     integer(From), integer(Step), integer(Len), Len > 0,
->>>>>>> back_to_float
     length(Range, Len),
     lrange(Range, From, Step).
 
@@ -195,36 +185,16 @@ eq_len(N0, N1, NewN0, NewN1) :-
     eq_len(C, N0, L0, N1, L1, NewN0, NewN1).
 eq_len((=), N0, _, N1, _, N0, N1).
 eq_len((<), N0, L0, N1, L1, NewN0, N1) :-
-<<<<<<< HEAD
-    0 =:= L1 mod L0,
-    Times is L1 div L0,
-    rep(N0, Times, NewN0).
-eq_len((>), N0, L0, N1, L1, N0, NewN1) :-
-    0 =:= L0 mod L1,
-    Times is L0 div L1,
-=======
     0 =:= L1 mod L0, Times is L1 div L0,
     rep(N0, Times, NewN0).
 eq_len((>), N0, L0, N1, L1, N0, NewN1) :-
     0 =:= L0 mod L1, Times is L0 div L1,
->>>>>>> back_to_float
     rep(N1, Times, NewN1).
 % Repeat a list
 rep(List, Times, RepList) :-
     findall(List, between(1,Times,_), Ls),
     append(Ls, RepList).
 
-<<<<<<< HEAD
-%% Math helper predicates %%
-add(N0,N1,R) :- R is N1 + N0.
-sub(N0,N1,R) :- R is N1 - N0.
-mul(N0,N1,R) :- R is N1 * N0.
-dvd(N0,N1,R) :- R is N1 rdiv N0.
-pow(N0,N1,R) :- R is N1 ** N0.
-sqr(N0,R) :- R is sqrt(N0).
-abs(N0,R) :- R is abs(N0).
-
-=======
 % Arithmetic functions as predicates
 add(N0, N1, R) :- R is N1+N0.
 sub(N0, N1, R) :- R is N1-N0.
@@ -235,21 +205,16 @@ sqr(N0, R) :- R is sqrt(N0).
 abs(N0, R) :- R is abs(N0).
 
 % Range functions
->>>>>>> back_to_float
 srange(Rel, From, Step, To, Current, [Current|Range]) :-
     call(Rel, Current, To),
     Next is Current + Step,
     !, srange(Rel, From, Step, To, Next, Range).
-<<<<<<< HEAD
-srange(_,_,_,_,_,[]).
-=======
 srange(_, _, _, _, _, []).
 
 lrange([], _, _).
 lrange([Current|Range], Current, Step) :-
     Next is Current + Step,
     lrange(Range, Next, Step).
->>>>>>> back_to_float
 
 lrange([], _, _).
 lrange([Current|Range], Current, Step) :-
@@ -348,10 +313,7 @@ command(nsplit) --> "nsplit".
 command(range) --> "range".
 command(srange) --> "srange".
 command(lrange) --> "lrange".
-<<<<<<< HEAD
-=======
 
->>>>>>> back_to_float
 % Commands
 command(quit) --> "quit".
 
