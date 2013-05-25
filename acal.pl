@@ -52,7 +52,15 @@ do_command(swap, [E0,E1|S], NewS) :- reduce_stack([E1,E0|S], NewS).
 
 % Reverse the whole stack
 do_command(revstack, S, NewS) :- reverse(S, RS), reduce_stack(RS, NewS).
-/* TODO */ % nrevstack
+
+% Reverse the order of the N elements of the stack below the top
+do_command(nrevstack, [e(n,[N])|S], NewS) :-
+    integer(N), N > 0,
+    length(First, N),
+    append(First, Rest, S),
+    reverse(First, Rev),
+    append(Rev, Rest, CurS),
+    reduce_stack(CurS, NewS).
 
 % Add a copy of the top element on top of the stack
 % - stack must have at least one element
@@ -277,9 +285,10 @@ command(abs) --> "abs".
 command(top) --> "top".
 command(show) --> "show".
 command(swap) --> "swap".
+command(revstack) --> "revstack".
+command(nrevstack) --> "nrevstack".
 command(duplicate) --> "duplicate".
 command(pop) --> "pop".
-command(revstack) --> "revstack".
 command(clear) --> "clear".
 % List operators
 command(len) --> "len".
