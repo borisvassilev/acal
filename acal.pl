@@ -71,11 +71,16 @@ do_command(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N, RN).
 do_command(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N, SN).
 do_command(bind, [e(n,N0),e(n,N1)|S], [e(n,B)|S]) :- append(N1, N0, B).
 do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :-
-    integer(N), N > 0,
+    integer(N), N > 1,
     length(Ns, N), append(Ns, Rest, S),
     maplist(stacked_nvals, Ns, ExtrNs),
     reverse(ExtrNs, RevExtrNs),
     append(RevExtrNs, BoundNs).
+do_command(split, [e(n,[N0,N1|NRest])|S], [e(n,[N0]),e(n,[N1|NRest])|S]).
+do_command(nsplit, [e(n,[N]),e(n,Ns)|S], [e(n,Front),e(n,[B|Back])|S]) :-
+    integer(N), N > 0,
+    length(Front, N),
+    append(Front, [B|Back], Ns).
 do_command(range, [e(n,[From,To])|S], [e(n,Range)|S]) :-
     integer(From), integer(To),
     (   From < To ->  srange(<, From, 1, To, From, Range)
@@ -227,6 +232,8 @@ command(rev) --> "rev".
 command(shuffle) --> "shuffle".
 command(bind) --> "bind".
 command(nbind) --> "nbind".
+command(split) --> "split".
+command(nsplit) --> "nsplit".
 command(range) --> "range".
 command(srange) --> "srange".
 command(lrange) --> "lrange".
