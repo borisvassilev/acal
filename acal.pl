@@ -38,44 +38,44 @@ reduce_stack([empty|Rest], Rest). % ignore this one too
 reduce_stack(S, S). % the stack could not be reduced
 
 % Do stack operations
-do_command(top, [e(T,C)|S], [e(T,C)|S]) :- print_se(T,C).
+do_command(top, [e(T,C)|S], [e(T,C)|S]) :- print_se(T, C).
 do_command(show, S, S) :- print_s(S).
 do_command(swap, [E0,E1|S], NewS) :- reduce_stack([E1,E0|S], NewS).
 do_command(duplicate, [Top|S], [Top,Top|S]).
 /* TODO */  % pop to a register
-do_command(pop, [e(T,C)|S], S) :- print_se(T,C).
+do_command(pop, [e(T,C)|S], S) :- print_se(T, C).
 % do_command(push, ...)
 do_command(revstack, S, NewS) :- reverse(S, RS), reduce_stack(RS, NewS).
 do_command(clear, _S, []).
 
 % Do list operations
-do_command(len, [e(n,N)|S], [e(n,[Len]),e(n,N)|S]) :- length(N,Len).
-do_command(sum, [e(n,N)|S], [e(n,[Sum]),e(n,N)|S]) :- sum_list(N,Sum).
-do_command(prod, [e(n,N)|S], [e(n,[Prod]),e(n,N)|S]) :- foldl(mul,N,1,Prod).
+do_command(len, [e(n,N)|S], [e(n,[Len]),e(n,N)|S]) :- length(N, Len).
+do_command(sum, [e(n,N)|S], [e(n,[Sum]),e(n,N)|S]) :- sum_list(N, Sum).
+do_command(prod, [e(n,N)|S], [e(n,[Prod]),e(n,N)|S]) :- foldl(mul, N, 1, Prod).
 do_command(mean, [e(n,N)|S], [e(n,[Mean]),e(n,N)|S]) :-
-    length(N,Len),
-    sum_list(N,Sum),
+    length(N, Len),
+    sum_list(N, Sum),
     Mean is Sum/Len.
 do_command(median, [e(n,N)|S], [e(n,[Median]),e(n,N)|S]) :-
-    msort(N,SN),
-    length(SN,Len),
+    msort(N, SN),
+    length(SN, Len),
     Mod is Len mod 2, Middle is Len div 2,
     (   Mod =:= 1 -> nth0(Middle, SN, Median)
     ;   nth0(Middle, SN, Above),
         nth1(Middle, SN, Below),
         Median is (Above+Below)/2
     ).
-do_command(sort, [e(n,N)|S], [e(n,SN)|S]) :- msort(N,SN).
-do_command(set, [e(n,N)|S], [e(n,SN)|S]) :- sort(N,SN).
-do_command(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N,RN).
-do_command(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N,SN).
-do_command(bind, [e(n,N0),e(n,N1)|S], [e(n,B)|S]) :- append(N1,N0,B).
+do_command(sort, [e(n,N)|S], [e(n,SN)|S]) :- msort(N, SN).
+do_command(set, [e(n,N)|S], [e(n,SN)|S]) :- sort(N, SN).
+do_command(rev, [e(n,N)|S], [e(n,RN)|S]) :- reverse(N, RN).
+do_command(shuffle, [e(n,N)|S], [e(n,SN)|S]) :- random_permutation(N, SN).
+do_command(bind, [e(n,N0),e(n,N1)|S], [e(n,B)|S]) :- append(N1, N0, B).
 do_command(nbind, [e(n,[N])|S], [e(n,BoundNs)|Rest]) :-
     integer(N), N > 0,
     length(Ns, N), append(Ns, Rest, S),
     maplist(stacked_nvals, Ns, ExtrNs),
     reverse(ExtrNs, RevExtrNs),
-    append(RevExtrNs,BoundNs).
+    append(RevExtrNs, BoundNs).
 do_command(range, [e(n,[From,To])|S], [e(n,Range)|S]) :-
     integer(From), integer(To),
     (   From < To ->  srange(<, From, 1, To, From, Range)
@@ -96,7 +96,7 @@ do_command(lrange, [e(n,[From,Step,Len])|S], [e(n,Range)|S]) :-
 % Do arithmetic operations
 do_command(BinOp, [e(n,N0),e(n,N1)|S], [e(n,R)|S]) :-
     memberchk(BinOp, [add,sub,mul,dvd,pow]), % binary operator
-    eq_len(N0,N1,NewN0,NewN1), % could fail!
+    eq_len(N0, N1, NewN0, NewN1), % could fail!
     maplist(BinOp, NewN0, NewN1, R),
     print_ns(R).
 do_command(UnOp, [e(n,N)|S], [e(n,R)|S]) :-
@@ -122,20 +122,20 @@ rep(List, Times, RepList) :-
     append(Ls, RepList).
 
 % Arithmetic functions as predicates
-add(N0,N1,R) :- R is N1+N0.
-sub(N0,N1,R) :- R is N1-N0.
-mul(N0,N1,R) :- R is N1*N0.
-dvd(N0,N1,R) :- R is N1/N0.
-pow(N0,N1,R) :- R is N1**N0.
-sqr(N0,R) :- R is sqrt(N0).
-abs(N0,R) :- R is abs(N0).
+add(N0, N1, R) :- R is N1+N0.
+sub(N0, N1, R) :- R is N1-N0.
+mul(N0, N1, R) :- R is N1*N0.
+dvd(N0, N1, R) :- R is N1/N0.
+pow(N0, N1, R) :- R is N1**N0.
+sqr(N0, R) :- R is sqrt(N0).
+abs(N0, R) :- R is abs(N0).
 
 % Range functions
 srange(Rel, From, Step, To, Current, [Current|Range]) :-
     call(Rel, Current, To),
     Next is Current + Step,
     !, srange(Rel, From, Step, To, Next, Range).
-srange(_,_,_,_,_,[]).
+srange(_, _, _, _, _, []).
 
 lrange([], _, _).
 lrange([Current|Range], Current, Step) :-
