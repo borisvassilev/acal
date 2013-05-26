@@ -6,7 +6,7 @@ main :-
     init(S),
     loop(S).
 
-init([]) :-
+init( global(stack([]), popregs([])) ) :-
     prompt(_, '').
 
 quit(S) :-
@@ -14,28 +14,40 @@ quit(S) :-
     halt(1).
 
 % Evaluation loop of the calculator with the stack as an argument
-loop(S) :-
+loop(G) :-
     %/* DEBUG */ prolog_current_frame(F),
     %            write(F), nl,
     read_line_to_codes(user_input, Codes),
-    parse_line(Codes, Line), 
-    /* DEBUG */ format('line: ~w~n', Line),
-    reduce_stack([Line|S], NewS),
-    /* DEBUG */ format('reduced stack: ~w~n', [NewS]),
-    !, loop(NewS).
+    parse_line(Codes, Input), 
+    /* DEBUG */ format('line: ~w~n', Input),
+    do(Input, G, NewG),
+    /* DEBUG */ format('new state: ~w~n', [NewG]),
+    !, loop(NewG).
 
 /* TODO */
 % make it possible to push operators and values
 % to the stack directly from the program
 
+stack(global(stack(S), _), stack(S)).
+
+do(e(c,Command), G, NewG) :-
+    (   memberchk(Command, []),
+    ->  reduce_global(Command, G, NewG)
+    ;   stack(G, S),
+        do_command(Command, S, NewS),
+        stack(NewG, NewS)
+    ).
+do(New, G, NewG) :-
+    stack(G, S),
+    stack(NewG, [New|S]).
 
 %% Reduce the current stack %%
-reduce_stack([quit|S], S) :- quit(S).
-reduce_stack([e(c,Command)|Rest], NewS) :- % unpack the arguments
-    do_command(Command, Rest, NewS).
-reduce_stack([error|Rest], Rest). % ignore for now
-reduce_stack([empty|Rest], Rest). % ignore this one too
-reduce_stack(S, S). % the stack could not be reduced
+reduce_stack(quit, S, S) :- quit(S).
+reduce_stack(error, S, S). % ignore for now
+reduce_stack(empty, S, S). % ignore this one too
+reduce_stack(e(c,Command), S, NewS) :-
+    do_command(Command, S, NewS).
+reduce_stack(New, S, [New|S]). % the stack could not be reduced
 
 %% Commands %%
 
@@ -48,10 +60,11 @@ do_command(show, S, S) :- print_s(S).
 
 % Swap the top two element of the stack
 % - stack must have at least two elements
-do_command(swap, [E0,E1|S], NewS) :- reduce_stack([E1,E0|S], NewS).
+do_command(swap, [E0,E1|S], NewS) :- reduce_stack(E1, [E0|S], NewS).
 
 % Reverse the whole stack
-do_command(revstack, S, NewS) :- reverse(S, RS), reduce_stack(RS, NewS).
+do_command(revstack, S, NewS) :-
+    reverse(S, [Top|RS]), reduce_stack(Top, RS, NewS).
 
 % Reverse the order of the N elements of the stack below the top
 do_command(nrevstack, [e(n,[N])|S], NewS) :-
@@ -59,8 +72,8 @@ do_command(nrevstack, [e(n,[N])|S], NewS) :-
     length(First, N),
     append(First, Rest, S),
     reverse(First, Rev),
-    append(Rev, Rest, CurS),
-    reduce_stack(CurS, NewS).
+    append(Rev, Rest, [Top|CurS]),
+    reduce_stack(Top, CurS, NewS).
 
 % Add a copy of the top element on top of the stack
 % - stack must have at least one element
