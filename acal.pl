@@ -104,6 +104,19 @@ do_command(push,
     ) :-
     get_assoc(popreg, G, [Top|PR], NewG, PR).
 
+% Clear the pop register
+do_command(clearpopreg,
+        S, G,
+        S, NewG
+    ) :-
+    put_assoc(popreg, G, [], NewG).
+
+% Delete the value on top
+do_command(del,
+        [el(T,C)|S], G,
+        S, G
+    ).
+
 % Clear the stack (rendering it empty)
 do_command(clear,
         _S, G,
@@ -393,8 +406,10 @@ command(swap) --> "swap".
 command(revstack) --> "revstack".
 command(nrevstack) --> "nrevstack".
 command(duplicate) --> "duplicate".
+command(del) --> "del".
 command(pop) --> "pop".
 command(push) --> "push".
+command(clearpopreg) --> "clearpopreg".
 command(clear) --> "clear".
 % List operators
 command(len) --> "len".
