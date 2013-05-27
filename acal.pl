@@ -1,4 +1,4 @@
-#!/home/boris/bin/swipl -q -t main -f
+#!/home/boris/bin/swipl -q -g main -f
 
 :- use_module(library('dcg/basics')).
 
@@ -7,12 +7,37 @@ main :-
     loop(S, G).
 
 init([], G) :-
-    prompt(_, ''),
-    list_to_assoc([popreg-[]], G).
+    get_options(OptPairs),
+    list_to_assoc([popreg-[]|OptPairs], G),
+    prompt(_, '').
 
-quit(S, G) :-
-    print_s(S, G),
+quit(S, _G) :-
+    print_s(S),
     halt(1).
+
+get_options(OptionPairs) :-
+    OptSpecs = [
+        [opt(verbose), type(integer), default(1),
+         shortflags([v]), longflags([verbosity]),
+         help([ 'verbosity level,'
+              , '0: only explicit print commands'
+              , '1: print out results of arithmetic operations'
+              , '2: print out results of all operations on numbers'
+              ])
+        ]
+    ],
+    catch(
+        opt_arguments(OptSpecs, Opts, _),
+        error(_E, _M),
+        (
+            opt_parse(OptSpecs, [], Opts, _)
+            %format('Unknown command line option(s)~nUsage:'),
+            %opt_help(OptSpecs, _HelpStr)
+        )
+    ),
+    maplist(opt_pairs, Opts, OptionPairs),
+    write(OptionPairs), nl.
+opt_pairs(Opt, Key-Val) :- Opt =.. [Key,Val].
 
 % Evaluation loop of the calculator with the stack as an argument
 loop(S, G) :-
@@ -20,17 +45,11 @@ loop(S, G) :-
     %            write(F), nl,
     read_line_to_codes(user_input, Codes),
     parse_line(Codes, Input), 
-    /* DEBUG */ format('~w~n', Input),
+    /* DEBUG */ %format('~w~n', Input),
     reduce_stack(Input, S, G, NewS, NewG),
-    /* DEBUG */ format('~w~n~w~n', [NewS, NewG]),
     !, loop(NewS, NewG).
 
-/* TODO */
-% make it possible to push operators and values
-% to the stack directly from the program
-
 %% Reduce the current stack %%
-reduce_stack(quit, S, G, S, G) :- quit(S, G).
 reduce_stack(error, S, G, S, G). % ignore for now
 reduce_stack(empty, S, G, S, G). % ignore this one too
 reduce_stack(el(c,Command), S, G, NewS, NewG) :-
@@ -38,6 +57,7 @@ reduce_stack(el(c,Command), S, G, NewS, NewG) :-
 reduce_stack(New, S, G, [New|S], G). % the stack could not be reduced
 
 %% Commands %%
+do_command(quit, S, G, S, G) :- quit(S, G).
 
 % Show the top element of the stack
 % - stack must have at least one element
@@ -45,14 +65,14 @@ do_command(top,
         [el(T,C)|S], G,
         [el(T,C)|S], G
     ) :-
-    print_se(T, C, G).
+    print_se(T, C).
 
 % Show the whole stack, top to bottom
 do_command(show,
         S, G,
         S, G
     ) :-
-    print_s(S, G).
+    print_s(S).
 
 % Swap the top two element of the stack
 % - stack must have at least two elements
@@ -94,7 +114,6 @@ do_command(pop,
         [el(T,C)|S], G,
         S, NewG
     ) :-
-    print_se(T, C, G),
     get_assoc(popreg, G, PR, NewG, [el(T,C)|PR]).
 
 % Push the top of the register back to the top of the stack
@@ -113,7 +132,7 @@ do_command(clearpopreg,
 
 % Delete the value on top
 do_command(del,
-        [el(T,C)|S], G,
+        [_Top|S], G,
         S, G
     ).
 
@@ -132,21 +151,24 @@ do_command(len,
         [el(n,N)|S], G,
         [el(n,[Len]),el(n,N)|S], G
     ) :-
-    length(N, Len).
+    length(N, Len),
+    vprint(el(n,[Len]), G, 2).
 
 % Sum of the list of numbers
 do_command(sum,
         [el(n,N)|S], G,
         [el(n,[Sum]),el(n,N)|S], G
     ) :-
-    sum_list(N, Sum).
+    sum_list(N, Sum),
+    vprint(el(n,[Sum]), G, 2).
 
 % Product of the list of numbers
 do_command(prod,
         [el(n,N)|S], G,
         [el(n,[Prod]),el(n,N)|S], G
     ) :-
-    foldl(mul, N, 1, Prod).
+    foldl(mul, N, 1, Prod),
+    vprint(el(n,[Prod]), G, 2).
 
 % Arithmetic mean of the list of numbers
 do_command(mean,
@@ -155,7 +177,8 @@ do_command(mean,
     ) :-
     length(N, Len),
     sum_list(N, Sum),
-    Mean is Sum/Len.
+    Mean is Sum/Len,
+    vprint(el(n,[Mean]), G, 2).
 
 % Median of the list of numbers
 % - if even number of elements, take arithmetic mean of middle two
@@ -170,7 +193,8 @@ do_command(median,
     ;   nth0(Middle, SN, Above),
         nth1(Middle, SN, Below),
         Median is (Above+Below)/2
-    ).
+    ),
+    vprint(el(n,[Median]), G, 2).
 
 % Sort the numbers in increasing order
 % - do not remove duplicates
@@ -178,28 +202,32 @@ do_command(sort,
         [el(n,N)|S], G,
         [el(n,SN)|S], G
     ) :-
-    msort(N, SN).
+    msort(N, SN),
+    vprint(el(n,SN), G, 2).
 
 % Numbers sorted in increasing order, without duplicates (set)
 do_command(set,
         [el(n,N)|S], G,
         [el(n,SN)|S], G
     ) :-
-    sort(N, SN).
+    sort(N, SN),
+    vprint(el(n,SN), G, 2).
 
 % Reverse the order of numbers
 do_command(rev,
         [el(n,N)|S], G,
         [el(n,RN)|S], G
     ) :-
-    reverse(N, RN).
+    reverse(N, RN),
+    vprint(el(n,RN), G, 2).
 
 % Shuffle the numbers randomly
 do_command(shuffle,
         [el(n,N)|S], G,
         [el(n,SN)|S], G
     ) :-
-    random_permutation(N, SN).
+    random_permutation(N, SN),
+    vprint(el(n,SN), G, 2).
 
 % Make one list of numbers from the top two lists of numbers
 % - top element is at the back of the new list
@@ -207,7 +235,8 @@ do_command(bind,
         [el(n,N0),el(n,N1)|S], G,
         [el(n,B)|S], G
     ) :-
-    append(N1, N0, B).
+    append(N1, N0, B),
+    vprint(el(n,B), G, 2).
 
 % Make one list of number from the top N lists of numbers on the stack
 % - N is the single integer value on the top of the stack
@@ -220,7 +249,8 @@ do_command(nbind,
     length(Ns, N), append(Ns, Rest, S),
     maplist(stacked_nvals, Ns, ExtrNs),
     reverse(ExtrNs, RevExtrNs),
-    append(RevExtrNs, BoundNs).
+    append(RevExtrNs, BoundNs),
+    vprint(el(n,BoundNs), G, 2).
 
 % Split off the first number from a list of numbers
 % - The element is now the new top
@@ -228,7 +258,8 @@ do_command(nbind,
 do_command(split,
         [el(n,[N0,N1|NRest])|S], G,
         [el(n,[N0]),el(n,[N1|NRest])|S], G
-    ).
+    ) :-
+    vprint([el(n,[N0]),el(n,[N1|NRest])], G, 2).
 
 % Split off the first N numbers from a list of numbers
 % - The split off elements are now the top
@@ -239,7 +270,8 @@ do_command(nsplit,
     ) :-
     integer(N), N > 0,
     length(Front, N),
-    append(Front, [B|Back], Ns).
+    append(Front, [B|Back], Ns),
+    vprint([el(n,Front),el(n,Back)], G, 2).
 
 % Make an list of integers [From, To)
 do_command(range,
@@ -249,7 +281,8 @@ do_command(range,
     integer(From), integer(To),
     (   From < To ->  srange(<, From, 1, To, From, Range)
     ;   From > To ->  srange(>, From, -1, To, From, Range)
-    ).
+    ),
+    vprint(el(n,Range), G, 2).
 
 % Make a list of integers [From, From+Step, ..., To)
 do_command(srange,
@@ -261,7 +294,8 @@ do_command(srange,
     ->  srange(<, From, Step, To, From, Range)
     ;   From > To, Step < 0
     ->  srange(>, From, Step, To, From, Range)
-    ).
+    ),
+    vprint(el(n,Range), G, 2).
 
 % Make a list of integers [From, From+Step, ...) of length Len
 do_command(lrange,
@@ -270,7 +304,8 @@ do_command(lrange,
     ) :-
     integer(From), integer(Step), integer(Len), Len > 0,
     length(Range, Len),
-    lrange(Range, From, Step).
+    lrange(Range, From, Step),
+    vprint(el(n,Range), G, 2).
 
 % Do arithmetic operations
 do_command(BinOp,
@@ -280,7 +315,7 @@ do_command(BinOp,
     memberchk(BinOp, [add,sub,mul,dvd,pow]), % binary operator
     eq_len(N0, N1, NewN0, NewN1), % could fail!
     maplist(BinOp, NewN0, NewN1, R),
-    print_ns(R).
+    vprint(el(n,R), G, 1).
 
 do_command(UnOp,
         [el(n,N)|S], G,
@@ -288,7 +323,7 @@ do_command(UnOp,
     ) :-
     memberchk(UnOp, [sqr,abs]), % unary operator
     maplist(UnOp, N, R),
-    print_ns(R).
+    vprint(el(n,R), G, 1).
 
 % Make the two lists the same length
 eq_len(N0, N1, NewN0, NewN1) :-
@@ -334,18 +369,28 @@ lrange([Current|Range], Current, Step) :-
     lrange(Range, Next, Step).
 %% Output %%
 
+vprint(X, G, L) :-
+    get_assoc(verbose, G, Level),
+    L >= Level,
+    vprint(X), !.
+vprint(_X, _G, _L).
+
+vprint(el(n,Ns)) :- print_ns(Ns).
+vprint(el(c,C)) :- print_se(c, C).
+vprint([H|Tail]) :- print_s([H|Tail]).
+
 % Print the whole stack
-print_s([el(Type,Content)|Es], G) :- print_se(Type,Content, G), !, print_s(Es, G).
-print_s([], _).
+print_s([el(Type,Content)|Es]) :- print_se(Type,Content), !, print_s(Es).
+print_s([]).
 
 % Print a stack element
-print_se(n, N, _G) :- print_ns(N). % print a list of numbers
-print_se(c, Command, _G) :- % print a command
+print_se(n, N) :- print_ns(N). % print a list of numbers
+print_se(c, Command) :- % print a command
     % convert back to original representation
     phrase( command(Command), String),
     format('~s~n', [String]).
 % catch-all clause, for now
-print_se(_Type, Name, _G) :- format('~w~n', [Name]).
+print_se(_Type, Name) :- format('~w~n', [Name]).
 
 % Print a list of numbers on a line
 % a list of numbers is guaranteed to have at least one element!
@@ -363,7 +408,7 @@ print_n(Rational) :- rational(Rational),
 %% Input %%
 
 % From a line of input, make a stack element
-parse_line(end_of_file, quit).
+parse_line(end_of_file, el(c,quit)).
 parse_line(Codes, Line) :-
     tokenize(Codes, Tokens), 
     maplist(parse, Tokens, Parsed),
