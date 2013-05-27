@@ -30,13 +30,10 @@ get_options(OptionPairs) :-
         opt_arguments(OptSpecs, Opts, _),
         error(_E, _M),
         (
-            opt_parse(OptSpecs, [], Opts, _)
-            %format('Unknown command line option(s)~nUsage:'),
-            %opt_help(OptSpecs, _HelpStr)
+            opt_parse(OptSpecs, [], Opts, _) % use defaults
         )
     ),
-    maplist(opt_pairs, Opts, OptionPairs),
-    write(OptionPairs), nl.
+    maplist(opt_pairs, Opts, OptionPairs).
 opt_pairs(Opt, Key-Val) :- Opt =.. [Key,Val].
 
 % Evaluation loop of the calculator with the stack as an argument
@@ -152,7 +149,7 @@ do_command(len,
         [el(n,[Len]),el(n,N)|S], G
     ) :-
     length(N, Len),
-    vprint(el(n,[Len]), G, 2).
+    vprint(el(n,[Len]), G, 1).
 
 % Sum of the list of numbers
 do_command(sum,
@@ -160,7 +157,7 @@ do_command(sum,
         [el(n,[Sum]),el(n,N)|S], G
     ) :-
     sum_list(N, Sum),
-    vprint(el(n,[Sum]), G, 2).
+    vprint(el(n,[Sum]), G, 1).
 
 % Product of the list of numbers
 do_command(prod,
@@ -168,7 +165,7 @@ do_command(prod,
         [el(n,[Prod]),el(n,N)|S], G
     ) :-
     foldl(mul, N, 1, Prod),
-    vprint(el(n,[Prod]), G, 2).
+    vprint(el(n,[Prod]), G, 1).
 
 % Arithmetic mean of the list of numbers
 do_command(mean,
@@ -178,7 +175,7 @@ do_command(mean,
     length(N, Len),
     sum_list(N, Sum),
     Mean is Sum/Len,
-    vprint(el(n,[Mean]), G, 2).
+    vprint(el(n,[Mean]), G, 1).
 
 % Median of the list of numbers
 % - if even number of elements, take arithmetic mean of middle two
@@ -194,7 +191,7 @@ do_command(median,
         nth1(Middle, SN, Below),
         Median is (Above+Below)/2
     ),
-    vprint(el(n,[Median]), G, 2).
+    vprint(el(n,[Median]), G, 1).
 
 % Sort the numbers in increasing order
 % - do not remove duplicates
@@ -230,17 +227,17 @@ do_command(shuffle,
     vprint(el(n,SN), G, 2).
 
 % Make one list of numbers from the top two lists of numbers
-% - top element is at the back of the new list
+% - top element is at the front of the new list
 do_command(bind,
         [el(n,N0),el(n,N1)|S], G,
         [el(n,B)|S], G
     ) :-
-    append(N1, N0, B),
+    append(N0, N1, B),
     vprint(el(n,B), G, 2).
 
 % Make one list of number from the top N lists of numbers on the stack
 % - N is the single integer value on the top of the stack
-% - "older" (lower in the stack) elements come before "newer" elements
+% - "older" (lower in the stack) elements come after "newer" elements
 do_command(nbind,
         [el(n,[N])|S], G,
         [el(n,BoundNs)|Rest], G
@@ -248,8 +245,7 @@ do_command(nbind,
     integer(N), N > 1,
     length(Ns, N), append(Ns, Rest, S),
     maplist(stacked_nvals, Ns, ExtrNs),
-    reverse(ExtrNs, RevExtrNs),
-    append(RevExtrNs, BoundNs),
+    append(ExtrNs, BoundNs),
     vprint(el(n,BoundNs), G, 2).
 
 % Split off the first number from a list of numbers
@@ -369,9 +365,9 @@ lrange([Current|Range], Current, Step) :-
     lrange(Range, Next, Step).
 %% Output %%
 
-vprint(X, G, L) :-
+vprint(X, G, MinLevel) :-
     get_assoc(verbose, G, Level),
-    L >= Level,
+    Level >= MinLevel,
     vprint(X), !.
 vprint(_X, _G, _L).
 
