@@ -38,11 +38,8 @@ opt_pairs(Opt, Key-Val) :- Opt =.. [Key,Val].
 
 % Evaluation loop of the calculator with the stack as an argument
 loop(S, G) :-
-    %/* DEBUG */ prolog_current_frame(F),
-    %            write(F), nl,
     read_line_to_codes(user_input, Codes),
     parse_line(Codes, Input), 
-    /* DEBUG */ %format('~w~n', Input),
     reduce_stack(Input, S, G, NewS, NewG),
     !, loop(NewS, NewG).
 
@@ -312,7 +309,14 @@ do_command(BinOp,
     eq_len(N0, N1, NewN0, NewN1), % could fail!
     maplist(BinOp, NewN0, NewN1, R),
     vprint(el(n,R), G, 1).
-
+do_command(BinOpBinR,
+        [el(n,N0),el(n,N1)|S], G,
+        [el(n,R0),el(n,R1)|S], G
+    ) :-
+    memberchk(BinOpBinR, [intdiv]), % binary operator, two results
+    eq_len(N0, N1, NewN0, NewN1), % could fail!
+    maplist(BinOpBinR, NewN0, NewN1, R0, R1),
+    vprint([el(n,R0),el(n,R1)], G, 1).
 do_command(UnOp,
         [el(n,N)|S], G,
         [el(n,R)|S], G
@@ -339,13 +343,19 @@ rep(List, Times, RepList) :-
     append(Ls, RepList).
 
 % Arithmetic functions as predicates
-add(N0, N1, R) :- R is N1+N0.
-sub(N0, N1, R) :- R is N1-N0.
-mul(N0, N1, R) :- R is N1*N0.
-dvd(N0, N1, R) :- R is N1/N0.
-pow(N0, N1, R) :- R is N1**N0.
+add(N0, N1, R) :- R is N1 + N0.
+sub(N0, N1, R) :- R is N1 - N0.
+mul(N0, N1, R) :- R is N1 * N0.
+dvd(N0, N1, R) :- N0 =\= 0, R is N1 / N0.
+pow(N0, N1, R) :- R is N1 ** N0.
 sqr(N0, R) :- R is sqrt(N0).
 abs(N0, R) :- R is abs(N0).
+
+intdiv(N0, N1, R0, R1) :-
+    I0 is truncate(N0),
+    I1 is truncate(N1),
+    R0 is I1 // I0,
+    R1 is I1 rem I0.
 
 % Range functions
 srange(Rel, From, Step, To, Current, [Current|Range]) :-
@@ -359,12 +369,9 @@ lrange([Current|Range], Current, Step) :-
     Next is Current + Step,
     lrange(Range, Next, Step).
 
-lrange([], _, _).
-lrange([Current|Range], Current, Step) :-
-    Next is Current + Step,
-    lrange(Range, Next, Step).
 %% Output %%
 
+% Print if verbosity level is appropriate
 vprint(X, G, MinLevel) :-
     get_assoc(verbose, G, Level),
     Level >= MinLevel,
@@ -439,6 +446,7 @@ command(dvd) --> "/".
 command(pow) --> "pow".
 command(sqr) --> "sqrt".
 command(abs) --> "abs".
+command(intdiv) --> "intdiv".
 % you can put these in a list probably...
 % Stack operators
 command(top) --> "top".
