@@ -4,7 +4,7 @@
 
 main :-
     init(S, G),
-    loop(S, G).
+    loop(user_input, S, G).
 
 init([], G) :-
     get_options(OptPairs),
@@ -37,11 +37,11 @@ get_options(OptionPairs) :-
 opt_pairs(Opt, Key-Val) :- Opt =.. [Key,Val].
 
 % Evaluation loop of the calculator with the stack as an argument
-loop(S, G) :-
-    read_line_to_codes(user_input, Codes),
+loop(IS, S, G) :-
+    read_line_to_codes(IS, Codes),
     parse_line(Codes, Input), 
     reduce_stack(Input, S, G, NewS, NewG),
-    !, loop(NewS, NewG).
+    !, loop(IS, NewS, NewG).
 
 %% Reduce the current stack %%
 reduce_stack(error, S, G, S, G). % ignore for now
@@ -264,7 +264,7 @@ do_command(nsplit,
     integer(N), N > 0,
     length(Front, N),
     append(Front, [B|Back], Ns),
-    vprint([el(n,Front),el(n,Back)], G, 2).
+    vprint([el(n,Front),el(n,[B|Back])], G, 2).
 
 % Make an list of integers [From, To)
 do_command(range,
@@ -374,16 +374,18 @@ lrange([Current|Range], Current, Step) :-
 % Print if verbosity level is appropriate
 vprint(X, G, MinLevel) :-
     get_assoc(verbose, G, Level),
-    Level >= MinLevel,
-    vprint(X), !.
-vprint(_X, _G, _L).
-
+    (   Level >= MinLevel -> vprint(X), !
+    ;   true
+    ).
+% Delegate printing
 vprint(el(n,Ns)) :- print_ns(Ns).
 vprint(el(c,C)) :- print_se(c, C).
 vprint([H|Tail]) :- print_s([H|Tail]).
 
-% Print the whole stack
-print_s([el(Type,Content)|Es]) :- print_se(Type,Content), !, print_s(Es).
+% Print a list of stack elements
+print_s([el(Type,Content)|Es]) :-
+    print_se(Type,Content),
+    !, print_s(Es).
 print_s([]).
 
 % Print a stack element
@@ -392,20 +394,27 @@ print_se(c, Command) :- % print a command
     % convert back to original representation
     phrase( command(Command), String),
     format('~s~n', [String]).
-% catch-all clause, for now
-print_se(_Type, Name) :- format('~w~n', [Name]).
 
 % Print a list of numbers on a line
-% a list of numbers is guaranteed to have at least one element!
-print_ns([N|Ns]) :- print_ns(Ns, N).
+print_ns([N|Ns]) :- % guaranteed to have at least one element
+    print_ns(Ns, N).
 
-print_ns([N|Ns], Prev) :- print_n(Prev), format(' '), print_ns(Ns, N).
-print_ns([], Last) :- print_n(Last), format('~n').
+print_ns([N|Ns], Prev) :-
+    print_n(Prev),
+    format(' '),
+    print_ns(Ns, N).
+print_ns([], Last) :-
+    print_n(Last),
+    format('~n').
 
-print_n(Int) :- integer(Int), format('~d', [Int]).
-print_n(Float) :- float(Float),
+print_n(Int) :-
+    integer(Int),
+    format('~d', [Int]).
+print_n(Float) :-
+    float(Float),
     format('~g', [Float]).
-print_n(Rational) :- rational(Rational),
+print_n(Rational) :-
+    rational(Rational),
     format('~g', [Rational]).
 
 %% Input %%
