@@ -300,6 +300,14 @@ do_command(lrange,
     lrange(Range, From, Step),
     vprint(el(n,Range), G, 2).
 
+do_command(nth,
+        [el(n,Indices),el(n,Ns)|S], G,
+        [el(n,Nths),el(n,Ns)|S], G
+    ) :-
+    nths(Indices, Ns, Nths),
+    vprint(el(n,Nths), G, 2).
+
+
 % Do arithmetic operations
 do_command(BinOp,
         [el(n,N0),el(n,N1)|S], G,
@@ -357,6 +365,8 @@ intdiv(N0, N1, R0, R1) :-
     R0 is I1 // I0,
     R1 is I1 rem I0.
 
+%% Helper predicates %%
+
 % Range functions
 srange(Rel, From, Step, To, Current, [Current|Range]) :-
     call(Rel, Current, To),
@@ -368,6 +378,12 @@ lrange([], _, _).
 lrange([Current|Range], Current, Step) :-
     Next is Current + Step,
     lrange(Range, Next, Step).
+
+% Select elements with indices
+nths([], _, []).
+nths([N|Ns], List, [E|Es]) :-
+    nth0(N, List, E),
+    nths(Ns, List, Es).
 
 %% Output %%
 
@@ -456,6 +472,7 @@ command(pow) --> "pow".
 command(sqr) --> "sqrt".
 command(abs) --> "abs".
 command(intdiv) --> "intdiv".
+command(nth) --> "nth".
 % you can put these in a list probably...
 % Stack operators
 command(top) --> "top".
