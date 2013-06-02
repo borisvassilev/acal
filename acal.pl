@@ -4,15 +4,28 @@
 
 main :-
     init(S, G),
-    loop(user_input, S, G).
+    loop(user_input, S, G, EndS, EndG),
+    quit(EndS, EndG).
 
-init([], G) :-
+init(S, G) :-
     get_options(OptPairs),
-    list_to_assoc([popreg-[]|OptPairs], G),
+    list_to_assoc([popreg-[]|OptPairs], InitG),
+    (   open_initfile(InitG, InitStream)
+    ->  loop(InitStream, [], InitG, S, G)
+    ;   S = [], G = InitG
+    ),
+
     prompt(_, '').
 
-quit(S, _G) :-
+open_initfile(G, InitStream) :-
+    get_assoc(initfile, G, InitFile),
+    atom(InitFile),
+    access_file(InitFile, read),
+    open(InitFile, read, InitStream).
+
+quit(S, G) :-
     print_s(S),
+    print_g(G),
     halt(1).
 
 get_options(OptionPairs) :-
@@ -25,6 +38,10 @@ get_options(OptionPairs) :-
               , '2: print out results of all operations on numbers'
               ])
         ]
+    ,   [opt(initfile), meta('INITFILE'), type(atom),
+         shortflags([i]), longflags([initfile]),
+         help(['evaluate INITFILE before interactive prompt'])
+        ]
     ],
     catch(
         opt_arguments(OptSpecs, Opts, _),
@@ -33,15 +50,18 @@ get_options(OptionPairs) :-
             opt_parse(OptSpecs, [], Opts, _) % use defaults
         )
     ),
-    maplist(opt_pairs, Opts, OptionPairs).
+    maplist(opt_pairs, Opts, OptionPairs),
+    write(OptionPairs),nl.
 opt_pairs(Opt, Key-Val) :- Opt =.. [Key,Val].
 
 % Evaluation loop of the calculator with the stack as an argument
-loop(IS, S, G) :-
+loop(IS, S, G, EndS, EndG) :-
     read_line_to_codes(IS, Codes),
-    parse_line(Codes, Input), 
+    parse_line(Codes, Input),
+    Input \= quit,
     reduce_stack(Input, S, G, NewS, NewG),
-    !, loop(IS, NewS, NewG).
+    !, loop(IS, NewS, NewG, EndS, EndG).
+loop(_, S, G, S, G). % close the loop
 
 %% Reduce the current stack %%
 reduce_stack(error, S, G, S, G). % ignore for now
@@ -51,7 +71,6 @@ reduce_stack(el(c,Command), S, G, NewS, NewG) :-
 reduce_stack(New, S, G, [New|S], G). % the stack could not be reduced
 
 %% Commands %%
-do_command(quit, S, G, S, G) :- quit(S, G).
 
 % Show the top element of the stack
 % - stack must have at least one element
@@ -398,6 +417,13 @@ vprint(el(n,Ns)) :- print_ns(Ns).
 vprint(el(c,C)) :- print_se(c, C).
 vprint([H|Tail]) :- print_s([H|Tail]).
 
+% Print global state
+print_g(G) :-
+    forall(
+        gen_assoc(K, G, V),
+        format('~w-~w~n', [K,V])
+    ).
+
 % Print a list of stack elements
 print_s([el(Type,Content)|Es]) :-
     print_se(Type,Content),
@@ -436,7 +462,8 @@ print_n(Rational) :-
 %% Input %%
 
 % From a line of input, make a stack element
-parse_line(end_of_file, el(c,quit)).
+parse_line(end_of_file, quit) :- !.
+parse_line("quit", quit) :- !.
 parse_line(Codes, Line) :-
     tokenize(Codes, Tokens), 
     maplist(parse, Tokens, Parsed),
