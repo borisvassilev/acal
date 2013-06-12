@@ -72,24 +72,30 @@ reduce_stack(New, S, G, [New|S], G). % the stack could not be reduced
 
 %% Commands %%
 
+% Show the top element of the stack
+% - stack must have at least one element
 do_command(top,
         [el(T,C)|S], G,
         [el(T,C)|S], G
     ) :-
     print_se(T, C).
 
+% Show the whole stack, top to bottom
 do_command(show,
         S, G,
         S, G
     ) :-
     print_s(S).
 
+% Swap the top two element of the stack
+% - stack must have at least two elements
 do_command(swap,
         [E0,E1|S], G,
         NewS, G
     ) :-
     reduce_stack(E1, [E0|S], G, NewS, G).
 
+% Reverse the whole stack
 do_command(revstack,
         S, G,
         NewS, G
@@ -97,6 +103,7 @@ do_command(revstack,
     reverse(S, [Top|RS]),
     reduce_stack(Top, RS, G, NewS, G).
 
+% Reverse the order of the N elements of the stack below the top
 do_command(nrevstack,
         [el(n,[N])|S], G,
         NewS, G
@@ -108,39 +115,51 @@ do_command(nrevstack,
     append(Rev, Rest, [Top|CurS]),
     reduce_stack(Top, CurS, G, NewS, G).
 
-do_command(dup,
+% Add a copy of the top element on top of the stack
+% - stack must have at least one element
+do_command(duplicate,
         [Top|S], G,
         [Top,Top|S], G
     ).
 
+% Pop the value on top to the top of a register
 do_command(pop,
         [el(T,C)|S], G,
         S, NewG
     ) :-
     get_assoc(popreg, G, PR, NewG, [el(T,C)|PR]).
 
+% Push the top of the register back to the top of the stack
 do_command(push,
         S, G,
         [Top|S], NewG
     ) :-
     get_assoc(popreg, G, [Top|PR], NewG, PR).
 
+% Clear the pop register
 do_command(clearpopreg,
         S, G,
         S, NewG
     ) :-
     put_assoc(popreg, G, [], NewG).
 
+% Delete the value on top
 do_command(del,
         [_Top|S], G,
         S, G
     ).
 
+% Clear the stack (rendering it empty)
 do_command(clear,
         _S, G,
         [], G
     ).
 
+% The following commands: len, sum, prod, mean, median
+% push their result to the top of the stack without
+% removing the list of numbers they are applied to
+%
+% Length of the list of numbers
 do_command(len,
         [el(n,N)|S], G,
         [el(n,[Len]),el(n,N)|S], G
@@ -148,6 +167,7 @@ do_command(len,
     length(N, Len),
     vprint(el(n,[Len]), G, 1).
 
+% Sum of the list of numbers
 do_command(sum,
         [el(n,N)|S], G,
         [el(n,[Sum]),el(n,N)|S], G
@@ -155,6 +175,7 @@ do_command(sum,
     sum_list(N, Sum),
     vprint(el(n,[Sum]), G, 1).
 
+% Product of the list of numbers
 do_command(prod,
         [el(n,N)|S], G,
         [el(n,[Prod]),el(n,N)|S], G
@@ -162,7 +183,8 @@ do_command(prod,
     foldl(mul, N, 1, Prod),
     vprint(el(n,[Prod]), G, 1).
 
-do_command(mean, 
+% Arithmetic mean of the list of numbers
+do_command(mean,
         [el(n,N)|S], G,
         [el(n,[Mean]),el(n,N)|S], G
     ) :-
@@ -171,6 +193,8 @@ do_command(mean,
     Mean is Sum/Len,
     vprint(el(n,[Mean]), G, 1).
 
+% Median of the list of numbers
+% - if even number of elements, take arithmetic mean of middle two
 do_command(median,
         [el(n,N)|S], G,
         [el(n,[Median]),el(n,N)|S], G
@@ -185,6 +209,8 @@ do_command(median,
     ),
     vprint(el(n,[Median]), G, 1).
 
+% Sort the numbers in increasing order
+% - do not remove duplicates
 do_command(sort,
         [el(n,N)|S], G,
         [el(n,SN)|S], G
@@ -192,6 +218,7 @@ do_command(sort,
     msort(N, SN),
     vprint(el(n,SN), G, 2).
 
+% Numbers sorted in increasing order, without duplicates (set)
 do_command(set,
         [el(n,N)|S], G,
         [el(n,SN)|S], G
@@ -199,6 +226,7 @@ do_command(set,
     sort(N, SN),
     vprint(el(n,SN), G, 2).
 
+% Reverse the order of numbers
 do_command(rev,
         [el(n,N)|S], G,
         [el(n,RN)|S], G
@@ -206,6 +234,7 @@ do_command(rev,
     reverse(N, RN),
     vprint(el(n,RN), G, 2).
 
+% Shuffle the numbers randomly
 do_command(shuffle,
         [el(n,N)|S], G,
         [el(n,SN)|S], G
@@ -213,6 +242,8 @@ do_command(shuffle,
     random_permutation(N, SN),
     vprint(el(n,SN), G, 2).
 
+% Make one list of numbers from the top two lists of numbers
+% - top element is at the front of the new list
 do_command(bind,
         [el(n,N0),el(n,N1)|S], G,
         [el(n,B)|S], G
@@ -220,6 +251,9 @@ do_command(bind,
     append(N0, N1, B),
     vprint(el(n,B), G, 2).
 
+% Make one list of number from the top N lists of numbers on the stack
+% - N is the single integer value on the top of the stack
+% - "older" (lower in the stack) elements come after "newer" elements
 do_command(nbind,
         [el(n,[N])|S], G,
         [el(n,BoundNs)|Rest], G
@@ -230,12 +264,18 @@ do_command(nbind,
     append(ExtrNs, BoundNs),
     vprint(el(n,BoundNs), G, 2).
 
+% Split off the first number from a list of numbers
+% - The element is now the new top
+% - the list of numbers must have more than one elements
 do_command(split,
         [el(n,[N0,N1|NRest])|S], G,
         [el(n,[N0]),el(n,[N1|NRest])|S], G
     ) :-
     vprint([el(n,[N0]),el(n,[N1|NRest])], G, 2).
 
+% Split off the first N numbers from a list of numbers
+% - The split off elements are now the top
+% - the list of numbers must have more than N elements
 do_command(nsplit,
         [el(n,[N]),el(n,Ns)|S], G,
         [el(n,Front),el(n,[B|Back])|S], G
@@ -245,6 +285,7 @@ do_command(nsplit,
     append(Front, [B|Back], Ns),
     vprint([el(n,Front),el(n,[B|Back])], G, 2).
 
+% Make an list of integers [From, To)
 do_command(range,
         [el(n,[From,To])|S], G,
         [el(n,Range)|S], G
@@ -255,6 +296,7 @@ do_command(range,
     ),
     vprint(el(n,Range), G, 2).
 
+% Make a list of integers [From, From+Step, ..., To)
 do_command(srange,
         [el(n,[From,Step,To])|S], G,
         [el(n,Range)|S], G
@@ -267,6 +309,7 @@ do_command(srange,
     ),
     vprint(el(n,Range), G, 2).
 
+% Make a list of integers [From, From+Step, ...) of length Len
 do_command(lrange,
         [el(n,[From,Step,Len])|S], G,
         [el(n,Range)|S], G
@@ -284,6 +327,7 @@ do_command(nth,
     vprint(el(n,Nths), G, 2).
 
 
+% Do arithmetic operations
 do_command(BinOp,
         [el(n,N0),el(n,N1)|S], G,
         [el(n,R)|S], G
@@ -355,6 +399,7 @@ lrange([Current|Range], Current, Step) :-
     lrange(Range, Next, Step).
 
 % Select elements with indices
+% Select elements with indices
 nths(Ns, List, Nths) :-
     LFunc =.. [listfunctor|List],
     nths_(Ns, LFunc, Nths).
@@ -394,7 +439,7 @@ print_s([]).
 print_se(n, N) :- print_ns(N). % print a list of numbers
 print_se(c, Command) :- % print a command
     % convert back to original representation
-    phrase( command(Command, _Help, _Type), String),
+    phrase( command(Command), String),
     format('~s~n', [String]).
 
 % Print a list of numbers on a line
@@ -447,157 +492,52 @@ parse(Token, u(Unknown)) :- % token not recognized
     atom_codes(Unknown, Token).
 
 parsed(parsed(n,N)) --> number(N), !.
-parsed(parsed(c,C)) --> command(C, _Help, _Type), !.
+parsed(parsed(c,C)) --> command(C), !.
 % will fail if the the token is not recognized
 
 % Arithmetic operators
-command(add,
-        help('Pop N0 and N1, new top is N1 + N0'),
-        'binary arithmetic'
-    ) --> "+".
-command(sub,
-        help('Pop N0 and N1, new top is N1 - N0'),
-        'binary arithmetic'
-    ) --> "-".
-command(mul,
-        help('Pop N0 and N1, new top is N1 * N0'),
-        'binary arithmetic'
-    ) --> "*".
-command(dvd,
-        help('Pop N0 and N1, new top is N1 / N0'),
-        'binary arithmetic'
-    ) --> "/".
-command(intdiv,
-        help('Pop N0 and N1, truncate to integer, Top is integer division, below it remainder'),
-        'binary arithmetic'
-    ) --> "intdiv".
-command(pow,
-        help('Pop N0 and N1, new top is N1 to the power of N0'),
-        'binary arithmetic'
-    ) --> "pow".
-command(sqr,
-        help('Pop N0, new top is square root of N0'),
-        'unary arithmetic'
-    ) --> "sqrt".
-command(abs,
-        help('Pop N0, new top is absolute value of N0'),
-        'unary arithmetic'
-    ) --> "abs".
+command(add) --> "+".
+command(sub) --> "-".
+command(mul) --> "*".
+command(dvd) --> "/".
+command(pow) --> "pow".
+command(sqr) --> "sqrt".
+command(abs) --> "abs".
+command(intdiv) --> "intdiv".
+command(nth) --> "nth".
+% you can put these in a list probably...
 % Stack operators
-command(top,
-        help('Print the top of the stack'),
-        stack
-    ) --> "top".
-command(show,
-        help('Print the whole stack, top to bottom'),
-        stack
-    ) --> "show".
-command(swap,
-        help('Swap the two elements on top of the stack'),
-        stack
-    ) --> "swap".
-command(revstack,
-        help('Reverse the order of elements in the stack'),
-        stack
-    ) --> "revstack".
-command(nrevstack,
-        help('Reverse the order of the top N elements of the stack'),
-        stack
-    ) --> "nrevstack".
-command(dup,
-        help('Duplicate the top of the stack'),
-        stack
-    ) --> "dup".
-command(del,
-        help('Delete the value of top of the stack'),
-        stack
-    ) --> "del".
-command(pop,
-        help('Pop the top of the stack to the pop register'),
-        stack
-    ) --> "pop".
-command(push,
-        help('Push the top of the pop register to the top of the stack'),
-        stack
-    ) --> "push".
-command(clearpopreg,
-        help('Clear the pop register'),
-        stack
-    ) --> "clearpopreg".
-command(clear,
-        help('Clear the stack, rendering it empty'),
-        stack
-    ) --> "clear".
+command(top) --> "top".
+command(show) --> "show".
+command(swap) --> "swap".
+command(revstack) --> "revstack".
+command(nrevstack) --> "nrevstack".
+command(duplicate) --> "duplicate".
+command(del) --> "del".
+command(pop) --> "pop".
+command(push) --> "push".
+command(clearpopreg) --> "clearpopreg".
+command(clear) --> "clear".
 % List operators
-command(len,
-        help('Push the length of the top element on top'),
-        list
-    ) --> "len".
-command(sum,
-        help('Push the sum of the numbers on top of the stack'),
-        list
-    ) --> "sum".
-command(prod,
-        help('Push the product of the numbers on top of the stack'),
-        list
-    ) --> "prod".
-command(mean,
-        help('Push the arithmetic mean on top of the stack'),
-        list
-    ) --> "mean".
-command(median,
-        help('Push the median on top of the stack'),
-        list
-    ) --> "median".
-command(sort,
-        help('Sort in increasing order'),
-        list
-    ) --> "sort".
-command(set,
-        help('Create an ordered set (removing duplicates)'),
-        list
-    ) --> "set".
-command(rev,
-        help('Reverse the order of all numbers'),
-        list
-    ) --> "rev".
-command(shuffle,
-        help('Shuffle the numbers (a random permutation)'),
-        list
-    ) --> "shuffle".
-command(bind,
-        help('Put the top two lists of numbers in one list (top first)'),
-        list
-    ) --> "bind".
-command(nbind,
-        help('Put the top N lists of numberss in one list (top first)'),
-        list
-    ) --> "nbind".
-command(split,
-        help('Split off the first number and put it on top'),
-        list
-    ) --> "split".
-command(nsplit,
-        help('Split off the first N numbers and put them on top'),
-        list
-    ) --> "nsplit".
-command(range,
-        help('Range of integers [From, From+1, ..., To)'),
-        list
-    ) --> "range".
-command(srange,
-        help('Range of integers [From, From+Step, ..., To)'),
-        list
-    ) --> "srange".
-command(lrange,
-        help('Range of integers [From, From+Step, ...] of length Len'),
-        list
-    ) --> "lrange".
-command(nth,
-        help('Create a list using the integers on top as indices for the list below'),
-        list
-    ) --> "nth".
+command(len) --> "len".
+command(sum) --> "sum".
+command(prod) --> "prod".
+command(mean) --> "mean".
+command(median) --> "median".
+command(sort) --> "sort".
+command(set) --> "set".
+command(rev) --> "rev".
+command(shuffle) --> "shuffle".
+command(bind) --> "bind".
+command(nbind) --> "nbind".
+command(split) --> "split".
+command(nsplit) --> "nsplit".
+command(range) --> "range".
+command(srange) --> "srange".
+command(lrange) --> "lrange".
 
+% Commands
+command(quit) --> "quit".
 
 % From a list of parsed, tagged elements, make a valid stack element
 normalize(Parsed, Line) :-
