@@ -319,6 +319,7 @@ do_command(lrange,
     lrange(Range, From, Step),
     vprint(el(n,Range), G, 2).
 
+% Create a list of the values in [1] indexed by the integers in [0]
 do_command(nth,
         [el(n,Indices),el(n,Ns)|S], G,
         [el(n,Nths),el(n,Ns)|S], G
@@ -326,6 +327,13 @@ do_command(nth,
     nths(Indices, Ns, Nths),
     vprint(el(n,Nths), G, 2).
 
+do_command(rep,
+        [el(n,[Rep]),el(n,Ns)|S], G,
+        [el(n,RepNs)|S], G
+    ) :-
+    integer(Rep), Rep > 0,
+    rep(Ns, Rep, RepNs),
+    vprint(el(n,RepNs), G, 2).
 
 % Do arithmetic operations
 do_command(BinOp,
@@ -504,7 +512,6 @@ command(pow) --> "pow".
 command(sqr) --> "sqrt".
 command(abs) --> "abs".
 command(intdiv) --> "//".
-command(nth) --> "nth".
 % you can put these in a list probably...
 % Stack operators
 command(top) --> "top".
@@ -535,6 +542,8 @@ command(nsplit) --> "nsplit".
 command(range) --> "range".
 command(srange) --> "srange".
 command(lrange) --> "lrange".
+command(nth) --> "nth".
+command(rep) --> "rep".
 
 % Commands
 command(quit) --> "quit".
