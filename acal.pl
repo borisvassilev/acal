@@ -491,8 +491,8 @@ parse(Token, Parsed) :-
 parse(Token, u(Unknown)) :- % token not recognized
     atom_codes(Unknown, Token).
 
-parsed(parsed(n,N)) --> number(N), !.
-parsed(parsed(c,C)) --> command(C), !.
+parsed(parsed(n,N)) --> number(N).
+parsed(parsed(c,C)) --> command(C).
 % will fail if the the token is not recognized
 
 % Arithmetic operators
@@ -503,7 +503,7 @@ command(dvd) --> "/".
 command(pow) --> "pow".
 command(sqr) --> "sqrt".
 command(abs) --> "abs".
-command(intdiv) --> "intdiv".
+command(intdiv) --> "//".
 command(nth) --> "nth".
 % you can put these in a list probably...
 % Stack operators
