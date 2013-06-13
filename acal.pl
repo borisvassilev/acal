@@ -9,16 +9,15 @@ main :-
 
 init(S, G) :-
     get_options(OptPairs),
-    list_to_assoc([popreg-[]|OptPairs], InitG),
-    (   open_initfile(InitG, InitStream)
+    select(initfile-InitFile, OptPairs, OtherOpts),
+    list_to_assoc([popreg-[]|OtherOpts], InitG),
+    (   open_initfile(InitFile, InitStream)
     ->  loop(InitStream, [], InitG, S, G)
     ;   S = [], G = InitG
     ),
-
     prompt(_, '').
 
-open_initfile(G, InitStream) :-
-    get_assoc(initfile, G, InitFile),
+open_initfile(InitFile, InitStream) :-
     atom(InitFile),
     access_file(InitFile, read),
     open(InitFile, read, InitStream).
