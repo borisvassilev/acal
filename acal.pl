@@ -22,9 +22,9 @@ open_initfile(InitFile, InitStream) :-
     access_file(InitFile, read),
     open(InitFile, read, InitStream).
 
-quit(S, G) :-
+quit(S, _G) :-
     print_s(S),
-    print_g(G),
+    %print_g(G),
     halt(1).
 
 get_options(OptionPairs) :-
@@ -49,8 +49,8 @@ get_options(OptionPairs) :-
             opt_parse(OptSpecs, [], Opts, _) % use defaults
         )
     ),
-    maplist(opt_pairs, Opts, OptionPairs),
-    write(OptionPairs),nl.
+    maplist(opt_pairs, Opts, OptionPairs).
+    %write(OptionPairs),nl.
 opt_pairs(Opt, Key-Val) :- Opt =.. [Key,Val].
 
 % Evaluation loop of the calculator with the stack as an argument
@@ -507,10 +507,10 @@ command(add) --> "+".
 command(sub) --> "-".
 command(mul) --> "*".
 command(dvd) --> "/".
-command(pow) --> "pow".
-command(sqr) --> "sqrt".
-command(abs) --> "abs".
-command(intdiv) --> "//".
+command(pow) --> "^".
+command(sqr) --> "\\". % it's actually "\", but needs to be escaped
+command(abs) --> "|".
+command(intdiv) --> "%".
 % you can put these in a list probably...
 % Stack operators
 command(top) --> "top".
