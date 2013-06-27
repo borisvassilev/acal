@@ -31,6 +31,8 @@ main :-
     init(S, G),
     loop(user_input, S, G, EndS, EndG),
     quit(EndS, EndG).
+main :-
+    halt(1).
 
 init(S, G) :-
     get_options(OptPairs),
@@ -50,7 +52,7 @@ open_initfile(InitFile, InitStream) :-
 quit(S, _G) :-
     print_s(S),
     %print_g(G),
-    halt(1).
+    halt.
 
 get_options(OptionPairs) :-
     OptSpecs = [
