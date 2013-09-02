@@ -1,4 +1,4 @@
-#!/home/boris/bin/swipl -q -g main -f
+#!/home/boris/bin/swipl
 /*
 Copyright (c) 2013, Boris Vassilev
 All rights reserved.
@@ -24,6 +24,10 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+:- set_prolog_flag(verbose, silent).
+
+:- initialization main.
 
 :- use_module(library('dcg/basics')).
 
@@ -277,7 +281,7 @@ do_command(bind,
     append(N0, N1, B),
     vprint(el(n,B), G, 2).
 
-% Make one list of number from the top N lists of numbers on the stack
+% Make one list of numbers from the top N lists of numbers on the stack
 % - N is the single integer value on the top of the stack
 % - "older" (lower in the stack) elements come after "newer" elements
 do_command(nbind,
@@ -391,11 +395,11 @@ eq_len(N0, N1, NewN0, NewN1) :-
     length(N0, L0), length(N1, L1),
     compare(C, L0, L1),
     eq_len(C, N0, L0, N1, L1, NewN0, NewN1).
-eq_len((=), N0, _, N1, _, N0, N1).
-eq_len((<), N0, L0, N1, L1, NewN0, N1) :-
+eq_len(=, N0, _, N1, _, N0, N1).
+eq_len(<, N0, L0, N1, L1, NewN0, N1) :-
     0 =:= L1 mod L0, Times is L1 div L0,
     rep(N0, Times, NewN0).
-eq_len((>), N0, L0, N1, L1, N0, NewN1) :-
+eq_len(>, N0, L0, N1, L1, N0, NewN1) :-
     0 =:= L0 mod L1, Times is L0 div L1,
     rep(N1, Times, NewN1).
 % Repeat a list
@@ -432,7 +436,6 @@ lrange([Current|Range], Current, Step) :-
     Next is Current + Step,
     lrange(Range, Next, Step).
 
-% Select elements with indices
 % Select elements with indices
 nths(Ns, List, Nths) :-
     LFunc =.. [listfunctor|List],
